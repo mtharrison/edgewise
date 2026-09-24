@@ -11,18 +11,30 @@ export function toast(msg: string) {
 }
 
 export async function refreshDevices() {
-  const devices = await engine.listDevices()
-  const { deviceId } = get()
-  const keep = devices.find((d) => d.id === deviceId)
-  set({ devices })
-  if (!keep && devices.length) selectDevice(devices[0].id)
+  const list = await engine.listDevices()
+  const { deviceId, devices: prevDevices } = get()
+  if (deviceId === null) {
+    set({ devices: list, deviceConnected: true })
+    if (list.length) selectDevice(list[0].id)
+    return
+  }
+  if (list.find((d) => d.id === deviceId)) {
+    set({ devices: list, deviceConnected: true })
+    return
+  }
+  const remembered = prevDevices.find((d) => d.id === deviceId)
+  set({ devices: remembered ? [...list, remembered] : list, deviceConnected: false })
 }
 
 export function selectDevice(id: string) {
-  const dev = get().devices.find((d) => d.id === id)
+  const { devices, deviceId: prevId, deviceConnected } = get()
+  const dev = devices.find((d) => d.id === id)
   if (!dev) return
   const rate = dev.samplerates.includes(get().samplerate) ? get().samplerate : dev.defaultSamplerate
-  set({ deviceId: id, samplerate: rate })
+  // A disconnected selection is only remembered so the picker can show it; once the
+  // user picks something else it must not be reselected if it reappears.
+  const nextDevices = !deviceConnected && prevId && prevId !== id ? devices.filter((d) => d.id !== prevId) : devices
+  set({ deviceId: id, samplerate: rate, deviceConnected: true, devices: nextDevices })
   if (get().channels.length !== dev.channels) set({ channels: makeChannels(dev.channels) })
 }
 

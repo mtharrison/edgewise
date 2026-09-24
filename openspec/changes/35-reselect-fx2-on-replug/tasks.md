@@ -2,9 +2,9 @@
 
 ## 1. Track disconnected selection in state
 
-- [ ] 1.1 Add a `deviceConnected` boolean to `State` (`src/renderer/src/store.ts`), defaulting to `true`, and verify `npm run typecheck` passes
-- [ ] 1.2 In `refreshDevices` (`src/renderer/src/actions.ts`), when the selected device is missing from the new list, keep it in `state.devices` (merged from the previous list) instead of falling back to `devices[0]`, and set `deviceConnected: false`; when it is present, set `deviceConnected: true`
-- [ ] 1.3 In `selectDevice`, always set `deviceConnected: true` for the newly picked device, and verify (via a unit test in step 2.1) that a disconnected device dropped this way is not reselected on the next `refreshDevices`
+- [x] 1.1 Add a `deviceConnected` boolean to `State` (`src/renderer/src/store.ts`), defaulting to `true`, and verify `npm run typecheck` passes
+- [x] 1.2 In `refreshDevices` (`src/renderer/src/actions.ts`), when the selected device is missing from the new list, keep it in `state.devices` (merged from the previous list) instead of falling back to `devices[0]`, and set `deviceConnected: false`; when it is present, set `deviceConnected: true`
+- [x] 1.3 In `selectDevice`, always set `deviceConnected: true` for the newly picked device, and verify (via a unit test in step 2.1) that a disconnected device dropped this way is not reselected on the next `refreshDevices`
 
 ## 2. Match the same FX2 model on reappearance
 

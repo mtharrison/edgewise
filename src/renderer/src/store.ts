@@ -36,6 +36,7 @@ export const DURATIONS = [0.001, 0.01, 0.1, 0.5, 1, 2, 5, 10, 30, 0]
 export interface State {
   devices: DeviceInfo[]
   deviceId: string | null
+  deviceConnected: boolean
   samplerate: number
   duration: number
   pretrigger: number
@@ -55,6 +56,7 @@ export interface State {
 export const useStore = create<State>(() => ({
   devices: [],
   deviceId: null,
+  deviceConnected: true,
   samplerate: 20_000_000,
   duration: 0.1,
   pretrigger: 0.1,
