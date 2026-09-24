@@ -10,19 +10,52 @@ export function toast(msg: string) {
   setTimeout(() => get().toast === msg && set({ toast: null }), 4000)
 }
 
+/**
+ * True if two device ids are the same FX2 board model (matched by USB vendor:product
+ * id, ignoring the port). Ids are `fx2:{vid}:{pid}:{port}` (see
+ * `crates/logic-core/src/devices/fx2lafw.rs`); non-fx2 ids (e.g. the demo device)
+ * never match.
+ */
+export function sameFx2Model(idA: string, idB: string): boolean {
+  const vidPid = (id: string) => {
+    const [driver, vid, pid] = id.split(':')
+    return driver === 'fx2' && vid && pid ? `${vid}:${pid}` : null
+  }
+  const a = vidPid(idA)
+  return a !== null && a === vidPid(idB)
+}
+
 export async function refreshDevices() {
-  const devices = await engine.listDevices()
-  const { deviceId } = get()
-  const keep = devices.find((d) => d.id === deviceId)
-  set({ devices })
-  if (!keep && devices.length) selectDevice(devices[0].id)
+  const list = await engine.listDevices()
+  const { deviceId, devices: prevDevices } = get()
+  if (deviceId === null) {
+    set({ devices: list, deviceConnected: true })
+    if (list.length) selectDevice(list[0].id)
+    return
+  }
+  if (list.find((d) => d.id === deviceId)) {
+    set({ devices: list, deviceConnected: true })
+    return
+  }
+  const reappeared = list.find((d) => sameFx2Model(d.id, deviceId))
+  if (reappeared) {
+    set({ devices: list })
+    selectDevice(reappeared.id)
+    return
+  }
+  const remembered = prevDevices.find((d) => d.id === deviceId)
+  set({ devices: remembered ? [...list, remembered] : list, deviceConnected: false })
 }
 
 export function selectDevice(id: string) {
-  const dev = get().devices.find((d) => d.id === id)
+  const { devices, deviceId: prevId, deviceConnected } = get()
+  const dev = devices.find((d) => d.id === id)
   if (!dev) return
   const rate = dev.samplerates.includes(get().samplerate) ? get().samplerate : dev.defaultSamplerate
-  set({ deviceId: id, samplerate: rate })
+  // A disconnected selection is only remembered so the picker can show it; once the
+  // user picks something else it must not be reselected if it reappears.
+  const nextDevices = !deviceConnected && prevId && prevId !== id ? devices.filter((d) => d.id !== prevId) : devices
+  set({ deviceId: id, samplerate: rate, deviceConnected: true, devices: nextDevices })
   if (get().channels.length !== dev.channels) set({ channels: makeChannels(dev.channels) })
 }
 
@@ -31,8 +64,9 @@ export function isBusy(s: Status) {
 }
 
 export async function startCapture() {
-  const { deviceId, samplerate, duration, channels, pretrigger } = get()
+  const { deviceId, deviceConnected, samplerate, duration, channels, pretrigger } = get()
   if (!deviceId) return toast('No device selected')
+  if (!deviceConnected) return toast("Device isn't connected")
   const trigger = channels
     .filter((c) => c.trigger)
     .map((c) => ({ channel: c.index, condition: c.trigger as string }))

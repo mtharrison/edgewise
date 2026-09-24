@@ -10,6 +10,7 @@ const COND_LABEL = { rising: '↑ Rising', falling: '↓ Falling', edge: '↕ An
 export function TopBar() {
   const devices = useStore((s) => s.devices)
   const deviceId = useStore((s) => s.deviceId)
+  const deviceConnected = useStore((s) => s.deviceConnected)
   const samplerate = useStore((s) => s.samplerate)
   const duration = useStore((s) => s.duration)
   const status = useStore((s) => s.status)
@@ -31,6 +32,7 @@ export function TopBar() {
               {devices.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
+                  {d.id === deviceId && !deviceConnected ? ' (disconnected)' : ''}
                 </option>
               ))}
             </select>
@@ -70,12 +72,12 @@ export function TopBar() {
       <button className="icon-btn ghost" title="Open capture (⌘O)" onClick={openFile}>
         <FolderOpen size={16} />
       </button>
-      <CaptureButton busy={busy} />
+      <CaptureButton busy={busy} deviceConnected={deviceConnected} />
     </header>
   )
 }
 
-function CaptureButton({ busy }: { busy: boolean }) {
+function CaptureButton({ busy, deviceConnected }: { busy: boolean; deviceConnected: boolean }) {
   const status = useStore((s) => s.status)
   const duration = useStore((s) => s.duration)
   const rate = useStore((s) => s.samplerate)
@@ -83,8 +85,14 @@ function CaptureButton({ busy }: { busy: boolean }) {
   const pct = busy && limit > 0 ? Math.min(100, (status.samples / limit) * 100) : 0
   const label =
     status.state === 'starting' ? (status.message || 'Starting…') : status.state === 'waiting' ? 'Armed' : busy ? 'Stop' : 'Start'
+  const disabled = !busy && !deviceConnected
   return (
-    <button className={`capture-btn ${busy ? 'busy' : ''} ${status.state}`} onClick={toggleCapture} title="Start / stop (Space)">
+    <button
+      className={`capture-btn ${busy ? 'busy' : ''} ${status.state}`}
+      onClick={toggleCapture}
+      disabled={disabled}
+      title={disabled ? "Device isn't connected" : 'Start / stop (Space)'}
+    >
       <span className="capture-fill" style={{ width: `${pct}%` }} />
       <span className="capture-content">
         {busy ? (status.state === 'waiting' ? <Circle size={12} className="pulse" /> : <Square size={12} fill="currentColor" />) : <Play size={13} fill="currentColor" />}
