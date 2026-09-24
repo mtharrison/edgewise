@@ -15,4 +15,4 @@
 
 - [x] 3.1 `npm test` and `npm run typecheck` pass
 - [x] 3.2 By hand with the demo device, on a channel with no decoder: every scenario in the spec delta, and #21's decoder scenarios still hold
-- [ ] 3.3 Run `/opsx:verify`, then archive the change in this PR
+- [x] 3.3 Run `/opsx:verify`, then archive the change in this PR
