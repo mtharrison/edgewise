@@ -8,6 +8,16 @@
 
 ![Edgewise decoding UART from the demo device, with markers A/B measuring one byte and a hover measurement on a PWM channel](docs/screenshot.png)
 
+## Why
+
+Saleae's Logic 2 sets the bar for logic analyzer software: fast, polished, a pleasure to use. It only works with Saleae hardware.
+
+PulseView is the open alternative, and the sigrok project behind it is a huge achievement. It supports a vast range of hardware, and Edgewise builds on its work, including the open fx2lafw firmware. But the interface shows its age, and it can struggle with large captures.
+
+Edgewise aims for both: a polished app that gives a $5 FX2 board from AliExpress the same experience as a top-of-the-range analyzer. It has a Rust core for large captures and native drivers, so it needs no vendor software. Today it supports FX2-based boards and a built-in demo device, with more hardware planned.
+
+## Getting started
+
 ```bash
 npm install
 npm run dev      # builds the Rust addon, then launches the app
