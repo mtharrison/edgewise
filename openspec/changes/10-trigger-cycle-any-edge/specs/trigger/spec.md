@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Trigger editing in the UI
-The user SHALL be able to set each channel's condition from a trigger popover that lists all five conditions, and SHALL be able to cycle a channel's condition from its label through none, rising, falling, any edge, high and low, returning to none after low. The popover SHALL offer a pre-trigger slider from 0% to 90% in 5% steps (default 10%) and a "Clear trigger" action. The trigger chip SHALL summarise the active conditions, joined by "&".
+The user SHALL be able to set each channel's condition from a trigger popover that lists all five conditions, and SHALL be able to cycle a channel's condition from its label through none, rising, falling, any edge, high and low, returning to none after low. When a channel has a condition, its trigger button SHALL show the condition's name ("Rising", "Falling", "Any edge", "High" or "Low") next to its icon. The popover SHALL offer a pre-trigger slider from 0% to 90% in 5% steps (default 10%) and a "Clear trigger" action. The trigger chip SHALL summarise the active conditions, joined by "&".
 
 #### Scenario: Set from popover
 - **WHEN** the user picks "Any edge" for D3 in the trigger popover
@@ -16,3 +16,7 @@ The user SHALL be able to set each channel's condition from a trigger popover th
 #### Scenario: Any edge reachable from channel label
 - **WHEN** a channel's condition is falling and the user clicks its trigger button once
 - **THEN** its condition becomes any edge and the trigger chip shows it
+
+#### Scenario: Trigger button names the condition
+- **WHEN** a channel's condition is any edge
+- **THEN** its trigger button shows the text "Any edge" next to the icon

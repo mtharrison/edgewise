@@ -17,6 +17,14 @@ const TRIGGER_ICON: Record<TriggerCondition, ReactElement> = {
   low: <ChevronsDown size={13} />
 }
 
+const TRIGGER_NAME: Record<TriggerCondition, string> = {
+  rising: 'Rising',
+  falling: 'Falling',
+  edge: 'Any edge',
+  high: 'High',
+  low: 'Low'
+}
+
 // Cmd on macOS; Ctrl elsewhere (on macOS, Ctrl+click is a right-click).
 const MOD_KEY = bridge.platform === 'darwin' ? 'Meta' : 'Control'
 const isMod = (e: { metaKey: boolean; ctrlKey: boolean }) => (MOD_KEY === 'Meta' ? e.metaKey : e.ctrlKey)
@@ -441,10 +449,17 @@ function ChannelLabel({ ch, top }: { ch: Channel; top: number }) {
       <span className="ch-actions">
         <button
           className={`icon-btn trig ${ch.trigger ? 'on' : ''}`}
-          title={ch.trigger ? `Trigger: ${ch.trigger} (click to change)` : 'Set trigger'}
+          title={ch.trigger ? `Trigger: ${TRIGGER_NAME[ch.trigger]} (click to change)` : 'Set trigger'}
           onClick={() => cycleTrigger(ch.index)}
         >
-          {ch.trigger ? TRIGGER_ICON[ch.trigger] : <Zap size={13} />}
+          {ch.trigger ? (
+            <>
+              {TRIGGER_ICON[ch.trigger]}
+              <span>{TRIGGER_NAME[ch.trigger]}</span>
+            </>
+          ) : (
+            <Zap size={13} />
+          )}
         </button>
         <button className="icon-btn" title="Hide channel" onClick={() => updateChannel(ch.index, { visible: false })}>
           <EyeOff size={13} />

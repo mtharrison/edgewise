@@ -8,6 +8,7 @@ See proposal.md (Why). The channel trigger button in the waveform's channel labe
 
 **Goals:**
 - Make the cycle order match the spec: none, rising, falling, any edge, high, low.
+- Make the channel trigger button say which condition is set, not just show an icon.
 
 **Non-Goals:**
 - Refactoring how the cycle is computed.
@@ -16,12 +17,14 @@ See proposal.md (Why). The channel trigger button in the waveform's channel labe
 
 - **Insert `'edge'` between `'falling'` and `'high'` in `TRIGGER_CYCLE`.** This is the order the issue asks for and groups the three edge conditions before the two level conditions. The alternative, appending `'edge'` after `'low'`, would leave it last and separate from the other edge conditions.
 - **Test via `cycleTrigger` against the store**, as `actions.test.ts` already does for device actions, rather than exporting `TRIGGER_CYCLE`. This tests the behavior the user sees, not the constant.
+- **Show the condition's name next to its icon on the channel trigger button, only when a condition is set.** The button widens to fit the text. With no condition it stays a bare ⚡ that only appears on hover, as today, so channels without triggers don't get cluttered. The alternative, a tooltip only, still hides the meaning until you hover.
+- **Use the popover's words without its arrow glyphs** ("Rising", "Falling", "Any edge", "High", "Low"). The button already has an icon, so the glyph would repeat it. The tooltip uses the same names, so it no longer shows the raw value ("Trigger: edge").
 
 ## Risks / Trade-offs
 
 - [Users used to the old order get one extra click from falling to high] → Acceptable; the new order is what the issue requests.
+- [The wider button leaves less room for the channel name in the 200px gutter] → Long names are cut off with an ellipsis, as they already are. Only channels with a trigger are affected.
 
 ## Follow-up issue candidates
 
-- A maintainer comment on #10 notes that it isn't clear what the per-channel trigger icons mean, or what happens if none is chosen. That is out of scope here (no `Spec:` requirements given) and could become its own issue.
-- The channel trigger button's tooltip shows the raw condition name (e.g. "Trigger: edge") rather than the popover's label ("Any edge").
+- A maintainer comment on #10 also asks what happens if no trigger is chosen (the capture starts immediately). Nothing in the UI says so. That could become its own issue.
