@@ -48,7 +48,11 @@ Whoever picks up an item SHALL assign it to themselves and set its status to Pro
 - **THEN** it skips that item
 
 ### Requirement: Spec approval gate
-A PR SHALL first be opened as a draft containing only the change's planning artifacts (proposal, specs, design, tasks). Implementation SHALL start only after a maintainer applies the `spec-approved` label to the PR, which moves the item to Building.
+A PR SHALL first be opened as a draft containing only the change's planning artifacts (proposal, specs, design, tasks). While it waits for review, the PR SHALL carry the `spec-review` label, applied and removed automatically. Implementation SHALL start only after a maintainer applies the `spec-approved` label to the PR, which removes `spec-review` and moves the item to Building.
+
+#### Scenario: Spec-only PR is marked
+- **WHEN** a draft PR with only planning artifacts is opened
+- **THEN** it has the `spec-review` label until `spec-approved` is applied or it leaves draft
 
 #### Scenario: Agent waits for approval
 - **WHEN** an agent has opened a draft PR with a proposal
@@ -78,3 +82,10 @@ Every PR SHALL run `openspec validate --all --strict` and the project's tests, a
 #### Scenario: Invalid spec
 - **WHEN** a PR contains a delta spec with a requirement that has no scenario
 - **THEN** the CI check fails and the PR cannot merge
+
+### Requirement: Tooling changes skip the flow
+Changes that only affect development tooling (`.github/`, `.claude/`, `openspec/config.yaml`, scripts) and not the app's behavior MAY go straight to a PR without an issue, a Ready gate or an OpenSpec change. If such a change alters the workflow this spec describes, the same PR SHALL update this spec directly. Tooling PRs SHALL still pass CI and be merged by a maintainer.
+
+#### Scenario: New label for the workflow
+- **WHEN** the maintainer asks for a new workflow label
+- **THEN** it is delivered in one PR that updates the tooling and this spec, with no issue or change folder
