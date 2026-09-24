@@ -1,5 +1,8 @@
+import { bridge } from '../api'
 import { fmtCount, fmtRate, fmtTime } from '../format'
 import { useStore } from '../store'
+
+const MOD = bridge.platform === 'darwin' ? '⌘' : 'Ctrl'
 
 const STATE_LABEL = { idle: 'Ready', starting: 'Starting', waiting: 'Waiting for trigger', running: 'Capturing', done: 'Done', error: 'Error' }
 
@@ -33,7 +36,7 @@ export function StatusBar() {
       <span className="spacer" />
       {toast && <span className="toast">{toast}</span>}
       <span className="muted keys">
-        <kbd>Space</kbd> capture · <kbd>scroll</kbd> zoom · <kbd>drag</kbd> pan · <kbd>F</kbd> fit · <kbd>A</kbd>/<kbd>B</kbd> markers · <kbd>[</kbd>
+        <kbd>Space</kbd> capture · <kbd>scroll</kbd> zoom · <kbd>drag</kbd> pan · <kbd>F</kbd> fit · <kbd>{MOD}</kbd> click zoom to packet · <kbd>A</kbd>/<kbd>B</kbd> markers · <kbd>[</kbd>
         <kbd>]</kbd> edges
       </span>
     </footer>

@@ -68,7 +68,7 @@ git push -u origin <N>-<slug>
 gh pr create --draft --title "<issue title>" --body "Closes #N ..."   # fill the PR template
 ```
 
-Report the PR link to the user and **stop**. A maintainer reviews the specs and applies `spec-approved`, or asks for changes on the PR.
+Board-sync adds the `spec-review` label to the draft. Report the PR link to the user and **stop**. A maintainer reviews the specs and applies `spec-approved`, or asks for changes on the PR.
 
 ## Phase 2: build after approval
 
