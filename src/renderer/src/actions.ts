@@ -64,8 +64,9 @@ export function isBusy(s: Status) {
 }
 
 export async function startCapture() {
-  const { deviceId, samplerate, duration, channels, pretrigger } = get()
+  const { deviceId, deviceConnected, samplerate, duration, channels, pretrigger } = get()
   if (!deviceId) return toast('No device selected')
+  if (!deviceConnected) return toast("Device isn't connected")
   const trigger = channels
     .filter((c) => c.trigger)
     .map((c) => ({ channel: c.index, condition: c.trigger as string }))

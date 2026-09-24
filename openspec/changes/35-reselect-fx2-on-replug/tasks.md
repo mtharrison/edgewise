@@ -14,8 +14,8 @@
 
 ## 3. Reflect disconnection in the top bar
 
-- [ ] 3.1 In `TopBar.tsx`, render the selected device's option/label as disconnected (e.g. an appended "(disconnected)" or a status icon) when `deviceConnected` is `false`
-- [ ] 3.2 Disable the Start control and show an explanatory message (e.g. via the existing toast/notification path) when the user tries to start a capture while `deviceConnected` is `false`; guard this in `startCapture` (`actions.ts`) as well as the button's `disabled` state, since Start is also reachable via the Space shortcut
+- [x] 3.1 In `TopBar.tsx`, render the selected device's option/label as disconnected (e.g. an appended "(disconnected)" or a status icon) when `deviceConnected` is `false`
+- [x] 3.2 Disable the Start control and show an explanatory message (e.g. via the existing toast/notification path) when the user tries to start a capture while `deviceConnected` is `false`; guard this in `startCapture` (`actions.ts`) as well as the button's `disabled` state, since Start is also reachable via the Space shortcut
 - [ ] 3.3 Manually verify in the running app (`npm run dev`, or a CDP-driven check per `EDGEWISE_CDP_PORT`): unplug the selected FX2 board, confirm the picker shows it disconnected and Start is blocked with a message, replug it and confirm it is reselected within ~3 s, then unplug again and pick another device to confirm that choice sticks
 
 ## 4. Verify and archive
