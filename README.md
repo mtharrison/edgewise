@@ -1,6 +1,12 @@
-# Edgewise
+<p align="center">
+  <img src="docs/logo.svg" width="80" height="80" alt="Edgewise logo">
+</p>
 
-A modern logic analyzer. Electron + React UI, Rust core.
+<h1 align="center">Edgewise</h1>
+
+<p align="center">A modern logic analyzer. Electron + React UI, Rust core.</p>
+
+![Edgewise decoding UART from the demo device, with markers A/B measuring one byte and a hover measurement on a PWM channel](docs/screenshot.png)
 
 ```bash
 npm install
