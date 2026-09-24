@@ -1,6 +1,8 @@
 # Runs backlog-pickup Phase 2 when a collaborator adds `spec-approved` to a
 # draft PR: implement, verify, archive, mark ready for review, stop.
 # The maintainer reviews and merges.
+# PROJECT_TOKEN is only used in its own job: steps in one job share a runner,
+# so a hijacked Claude step could otherwise plant a fake `gh` and capture it.
 
 name: Auto build
 
@@ -18,26 +20,30 @@ concurrency:
   group: build-${{ github.event.pull_request.number }}
 
 jobs:
-  build:
+  gate:
     # Same-repo branches only; fork PRs get no secrets.
     if: >-
       github.event.label.name == 'spec-approved' &&
       github.event.pull_request.draft &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-    env:
-      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    timeout-minutes: 5
     steps:
-      # Cheap gate before spending tokens; the skill re-checks everything.
+      # Cheap check before spending tokens; the skill re-checks everything.
       - name: Labeler is a collaborator
-        id: gate
         env:
           GH_TOKEN: ${{ github.token }}
           SENDER: ${{ github.event.sender.login }}
           REPO: ${{ github.repository }}
         run: gh api "repos/$REPO/collaborators/$SENDER" --silent
 
+  build:
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
@@ -63,11 +69,15 @@ jobs:
           claude_args: >-
             --allowedTools "Bash(gh:*),Bash(git:*),Bash(npm:*),Bash(npx:*),Bash(cargo:*),Read,Write,Edit,Glob,Grep,Skill"
 
+  trigger:
+    needs: [gate, build]
+    if: always() && needs.gate.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
       # Pushes and PR changes made with the Claude app token trigger no workflows.
       # Reopening with the owner's token starts CI, Board sync and review.
-      # Claude never sees this token.
       - name: Trigger PR workflows
-        if: ${{ !cancelled() && steps.gate.outcome == 'success' }}
         env:
           GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
           PR: ${{ github.event.pull_request.number }}
