@@ -1,8 +1,6 @@
 # Runs backlog-pickup Phase 2 when a collaborator adds `spec-approved` to a
 # draft PR: implement, verify, archive, mark ready for review, stop.
 # The maintainer reviews and merges.
-# PROJECT_TOKEN is only used in its own job: steps in one job share a runner,
-# so a hijacked Claude step could otherwise plant a fake `gh` and capture it.
 
 name: Auto build
 
@@ -69,17 +67,3 @@ jobs:
           claude_args: >-
             --allowedTools "Bash(gh:*),Bash(git:*),Bash(npm:*),Bash(npx:*),Bash(cargo:*),Read,Write,Edit,Glob,Grep,Skill"
 
-  trigger:
-    needs: [gate, build]
-    if: always() && needs.gate.result == 'success'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      # Pushes and PR changes made with the Claude app token trigger no workflows.
-      # Reopening with the owner's token starts CI, Board sync and review.
-      - name: Trigger PR workflows
-        env:
-          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
-          PR: ${{ github.event.pull_request.number }}
-          REPO: ${{ github.repository }}
-        run: gh pr close "$PR" -R "$REPO" && gh pr reopen "$PR" -R "$REPO"
