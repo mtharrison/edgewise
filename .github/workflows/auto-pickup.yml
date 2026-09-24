@@ -1,0 +1,55 @@
+# Runs backlog-pickup Phase 1 when a collaborator labels an issue `ready`:
+# claim, propose, open a draft PR, stop. Phase 2 stays manual.
+# Setup: run /install-github-app in Claude Code (installs the app, sets the secret).
+
+name: Auto pickup
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+concurrency:
+  group: pickup-${{ github.event.issue.number }}
+
+jobs:
+  pickup:
+    if: github.event.label.name == 'ready' && github.event.issue.state == 'open'
+    runs-on: ubuntu-latest
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      # Cheap gate before spending tokens; the skill re-checks everything.
+      - name: Labeler is a collaborator
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SENDER: ${{ github.event.sender.login }}
+          REPO: ${{ github.repository }}
+        run: gh api "repos/$REPO/collaborators/$SENDER" --silent
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Run the backlog-pickup skill, Phase 1 only, on issue #${{ github.event.issue.number }} in ${{ github.repository }}.
+            You are running in CI, so:
+            - Assign the issue to ${{ github.event.sender.login }}, not @me.
+            - Skip the board checks and the board Status edit; your token cannot reach the user project, and Board sync handles Status.
+            - If any check fails, comment on the issue saying which one, then stop.
+            Stop after opening the draft PR. Do not implement.
+          claude_args: >-
+            --allowedTools "Bash(gh:*),Bash(git:*),Bash(npx openspec:*),Read,Write,Edit,Glob,Grep,Skill"
