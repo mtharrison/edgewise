@@ -1,0 +1,27 @@
+name: Feature request
+description: Suggest something Edgewise should do
+labels: [needs-triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and what gets in the way today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you'd like
+    validations:
+      required: true
+  - type: textarea
+    id: criteria
+    attributes:
+      label: Acceptance criteria
+      description: How would we know it's done? One observable behavior per line.
+      placeholder: |
+        - When I ..., then ...
+  - type: markdown
+    attributes:
+      value: A maintainer reviews every request before it goes on the backlog, and may rewrite the acceptance criteria.

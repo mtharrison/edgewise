@@ -1,0 +1,74 @@
+# Keeps the backlog board's Status in step with labels and PR state.
+# Never checks out code. Fork PRs get no secrets, so they are synced by hand.
+
+name: Board sync
+
+on:
+  issues:
+    types: [labeled, closed]
+  pull_request:
+    types: [opened, reopened, labeled, ready_for_review, converted_to_draft, closed]
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+concurrency:
+  group: board-${{ github.event.issue.number || github.event.pull_request.number }}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+      PROJECT_ID: PVT_kwHOAA36YM4BkieC
+      STATUS_FIELD: PVTSSF_lAHOAA36YM4BkieCzhjStUE
+    steps:
+      - name: No token
+        if: env.GH_TOKEN == ''
+        run: echo "::notice::PROJECT_TOKEN is not available (fork PR or unset secret). Update the board by hand."
+
+      - name: Update Status
+        if: env.GH_TOKEN != ''
+        env:
+          EVENT: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          LABEL: ${{ github.event.label.name }}
+          NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+          DRAFT: ${{ github.event.pull_request.draft }}
+          MERGED: ${{ github.event.pull_request.merged }}
+          APPROVED: ${{ contains(github.event.pull_request.labels.*.name, 'spec-approved') }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          declare -A OPTION=([Inbox]=ae0bcad4 [Ready]=f2db8ffe [Proposed]=efedb30d [Building]=bde8b81e ["In review"]=5e26cb2f [Done]=f80d91b9)
+          building_or_proposed() { [ "$APPROVED" = true ] && echo Building || echo Proposed; }
+
+          status=""
+          if [ "$EVENT" = issues ]; then
+            issues="$NUMBER"
+            case "$ACTION" in
+              labeled) [ "$LABEL" = ready ] && status=Ready ;;
+              closed) status=Done ;;
+            esac
+          else
+            issues=$(gh pr view "$NUMBER" -R "$REPO" --json closingIssuesReferences -q '.closingIssuesReferences[].number')
+            case "$ACTION" in
+              opened|reopened) [ "$DRAFT" = true ] && status=$(building_or_proposed) || status="In review" ;;
+              labeled) [ "$LABEL" = spec-approved ] && [ "$DRAFT" = true ] && status=Building ;;
+              ready_for_review) status="In review" ;;
+              converted_to_draft) status=$(building_or_proposed) ;;
+              closed) [ "$MERGED" = true ] && status=Done ;;
+            esac
+          fi
+
+          if [ -z "$status" ] || [ -z "$issues" ]; then
+            echo "Nothing to update."
+            exit 0
+          fi
+          for i in $issues; do
+            item=$(gh project item-add 3 --owner mtharrison --url "https://github.com/$REPO/issues/$i" --format json -q .id)
+            gh project item-edit --id "$item" --project-id "$PROJECT_ID" --field-id "$STATUS_FIELD" --single-select-option-id "${OPTION[$status]}"
+            echo "#$i → $status"
+          done
