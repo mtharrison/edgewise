@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
 import { ArrowDownRight, ArrowUpRight, ChevronsDown, ChevronsUp, EyeOff, Zap } from 'lucide-react'
-import { bridge, engine } from '../api'
-import { cycleTrigger, frameAnnotation, panBy, updateChannel, zoomAt } from '../actions'
-import { annKey, drawFrame, type Frame, type Highlight } from '../draw'
+import { engine } from '../api'
+import { cycleTrigger, panBy, updateChannel, zoomAt } from '../actions'
+import { annKey, drawFrame, type Frame } from '../draw'
 import { fmtFreq, fmtTime } from '../format'
 import { CH_H, layoutRows, RULER_H, type Row } from '../layout'
 import { get, set, useStore } from '../store'
 import type { Annotation, Channel, TriggerCondition } from '../types'
-import { annotationAt } from '../view'
 
 const TRIGGER_ICON: Record<TriggerCondition, ReactElement> = {
   rising: <ArrowUpRight size={13} />,
@@ -16,10 +15,6 @@ const TRIGGER_ICON: Record<TriggerCondition, ReactElement> = {
   high: <ChevronsUp size={13} />,
   low: <ChevronsDown size={13} />
 }
-
-// Cmd on macOS; Ctrl elsewhere (on macOS, Ctrl+click is a right-click).
-const MOD_KEY = bridge.platform === 'darwin' ? 'Meta' : 'Control'
-const isMod = (e: { metaKey: boolean; ctrlKey: boolean }) => (MOD_KEY === 'Meta' ? e.metaKey : e.ctrlKey)
 
 export function Waveform() {
   const channels = useStore((s) => s.channels)
@@ -34,12 +29,6 @@ export function Waveform() {
   const rowsRef = useRef<Row[]>(rows)
   const scrollRef = useRef(0)
   rowsRef.current = rows
-
-  // ---- zoom-to-annotation: modifier state and the annotation under the pointer ----
-  const modRef = useRef(false)
-  const pointer = useRef<{ x: number; y: number } | null>(null)
-  const highlightRef = useRef<Highlight | null>(null)
-  const [highlight, setHighlight] = useState<Highlight | null>(null)
 
   // ---- drawing: coalesced to one frame, one engine round-trip in flight ----
   const draw = useRef({ pending: false, busy: false, again: false })
@@ -91,13 +80,6 @@ export function Waveform() {
         c.annKey = annK
       }
 
-      const hl = hitTest()
-      const prev = highlightRef.current
-      if (hl?.decoder !== prev?.decoder || hl?.row !== prev?.row || hl?.start !== prev?.start || hl?.end !== prev?.end) {
-        highlightRef.current = hl
-        setHighlight(hl)
-      }
-
       const ctx = canvas.getContext('2d')!
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       drawFrame(ctx, w, h, dpr, {
@@ -112,8 +94,7 @@ export function Waveform() {
         markers: st.markers,
         hover: st.hover,
         measurement: st.measurement,
-        hoverChannel: st.hover?.channel ?? null,
-        highlight: hl
+        hoverChannel: st.hover?.channel ?? null
       })
     } finally {
       d.busy = false
@@ -176,39 +157,6 @@ export function Waveform() {
     return rowsRef.current.find((r) => yy >= r.y && yy < r.y + r.h)
   }
 
-  /** Annotation under the pointer while the modifier is held, from the last drawn annotations. */
-  const hitTest = (): Highlight | null => {
-    const p = pointer.current
-    if (!modRef.current || !p || p.y < RULER_H) return null
-    const row = rowAt(p.y)
-    if (row?.kind !== 'decoder') return null
-    const { view } = get()
-    const anns = cache.current.anns.get(annKey(row.dec.id, row.row)) ?? []
-    const a = annotationAt(anns, view.start + p.x * view.spp, 2 * view.spp)
-    return a && { decoder: row.dec.id, row: row.row, start: a.start, end: a.end }
-  }
-
-  // Pressing or releasing the modifier updates the highlight without moving the pointer.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== MOD_KEY) return
-      modRef.current = e.type === 'keydown'
-      requestDraw()
-    }
-    const onBlur = () => {
-      modRef.current = false
-      requestDraw()
-    }
-    window.addEventListener('keydown', onKey)
-    window.addEventListener('keyup', onKey)
-    window.addEventListener('blur', onBlur)
-    return () => {
-      window.removeEventListener('keydown', onKey)
-      window.removeEventListener('keyup', onKey)
-      window.removeEventListener('blur', onBlur)
-    }
-  }, [requestDraw])
-
   // ---- pointer interaction ----
   const drag = useRef<{ kind: 'pan' | 'marker'; marker?: 'a' | 'b'; x0: number; last: number; moved: boolean } | null>(null)
 
@@ -220,14 +168,6 @@ export function Waveform() {
   const onPointerDown = (e: React.PointerEvent) => {
     const { x, y } = local(e)
     const { view, markers } = get()
-    pointer.current = { x, y }
-    modRef.current = isMod(e)
-    if (modRef.current && y >= RULER_H && rowAt(y)?.kind === 'decoder') {
-      // Modified click frames the annotation; it never pans or selects a table row.
-      const hit = hitTest()
-      if (hit) frameAnnotation(hit.start, hit.end)
-      return
-    }
     ;(e.target as Element).setPointerCapture(e.pointerId)
     if (y < RULER_H) {
       const near = (s: number | null) => s !== null && Math.abs((s - view.start) / view.spp - x) < 8
@@ -243,8 +183,6 @@ export function Waveform() {
     const { x, y } = local(e)
     const { view } = get()
     const sample = view.start + x * view.spp
-    pointer.current = { x, y }
-    modRef.current = isMod(e)
     const dr = drag.current
     if (dr) {
       if (Math.abs(x - dr.x0) > 3) dr.moved = true
@@ -337,14 +275,9 @@ export function Waveform() {
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerLeave={() => {
-          pointer.current = null
-          if (!drag.current) set({ hover: null, measurement: null })
-          requestDraw()
-        }}
+        onPointerLeave={() => !drag.current && set({ hover: null, measurement: null })}
         onDoubleClick={(e) => local(e).y < RULER_H && set({ markers: { a: null, b: null } })}
         onWheel={onWheel}
-        style={highlight ? { cursor: 'pointer' } : undefined}
       >
         <canvas ref={canvasRef} />
         <HoverTip />
