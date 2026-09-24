@@ -1,6 +1,7 @@
 import { bridge, engine } from './api'
 import { DECODER_COLORS, get, makeChannels, set } from './store'
 import type { DecoderConfig, DecoderInst, Status, TriggerCondition } from './types'
+import { clampViewTo, frameRange } from './view'
 
 const TRIGGER_CYCLE: (TriggerCondition | null)[] = [null, 'rising', 'falling', 'high', 'low']
 
@@ -94,11 +95,7 @@ export function fit() {
 
 export function clampView(start: number, spp: number) {
   const { status, plotWidth } = get()
-  const n = Math.max(status.samples, 1)
-  spp = Math.min(Math.max(spp, 1 / 64), (n / plotWidth) * 4)
-  const visible = spp * plotWidth
-  start = Math.min(Math.max(start, -visible * 0.5), n - visible * 0.5)
-  return { start, spp }
+  return clampViewTo(start, spp, status.samples, plotWidth)
 }
 
 export function zoomAt(factor: number, x: number) {
@@ -118,6 +115,12 @@ export function centerOn(sample: number, width?: number) {
   let spp = view.spp
   if (width && width / spp < 24) spp = Math.max(width / (plotWidth / 8), 1 / 64)
   set({ view: clampView(sample - (plotWidth / 2) * spp, spp), follow: false })
+}
+
+/** Zooms and pans so [start, end] fills the plot width with a small margin. */
+export function frameAnnotation(start: number, end: number) {
+  const v = frameRange(start, end, get().plotWidth)
+  set({ view: clampView(v.start, v.spp), follow: false })
 }
 
 // ---- channels ----

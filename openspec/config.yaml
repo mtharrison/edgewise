@@ -16,7 +16,7 @@ context: |
 
 rules:
   proposal:
-    - Link the issue the change delivers (e.g. "Delivers #12") in the Why section
+    - 'Link the issue the change delivers (e.g. "Delivers #12") in the Why section'
     - Include a Non-goals list in What Changes
     - Name the epic (capability) the issue belongs to
   specs:

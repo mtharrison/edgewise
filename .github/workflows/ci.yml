@@ -26,5 +26,5 @@ jobs:
         run: npx openspec validate --all --strict
       - name: Typecheck
         run: npm run typecheck
-      - name: Rust tests
+      - name: Tests
         run: npm test
