@@ -24,6 +24,8 @@ npm run dev      # builds the Rust addon, then launches the app
 npm test         # Rust unit tests
 ```
 
+To try a pull request without disturbing your checkout, `scripts/pr-run.sh 41` checks it out in a sibling worktree and launches it.
+
 Needs Rust (rustup) and Node 20+.
 
 ## Layout
