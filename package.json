@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "description": "A modern logic analyzer with a Rust core",
   "main": "out/main/index.js",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "native": "node scripts/build-native.mjs",

@@ -20,3 +20,7 @@ Needs Rust (rustup) and Node 20+.
 ## Hardware
 
 FX2-based boards running sigrok's `fx2lafw` firmware. If the board has no firmware yet, Logical uploads it. It looks for the `.fw` files in the app's firmware folder (File → Open Firmware Folder), in installed PulseView bundles, and in the usual `sigrok-firmware` locations.
+
+## License
+
+MIT
