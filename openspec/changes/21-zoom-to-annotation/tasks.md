@@ -1,14 +1,14 @@
 ## 1. Test setup
 
-- [ ] 1.1 Add Vitest as a dev dependency and change `npm test` to run the Rust tests then `vitest run`
+- [x] 1.1 Add Vitest as a dev dependency and change `npm test` to run the Rust tests then `vitest run`
 - [ ] 1.2 Confirm CI still passes with the new test step
 
 ## 2. View maths
 
-- [ ] 2.1 Create `src/renderer/src/view.ts` with `clampViewTo`, moved unchanged from `clampView` in `actions.ts`; keep `clampView` as a wrapper
-- [ ] 2.2 Add `frameRange(start, end, plotWidth)` (range centred, spanning 90% of the width)
-- [ ] 2.3 Add `annotationAt(anns, sample, tolerance)` returning the annotation (or merged block) covering the sample, or null
-- [ ] 2.4 Tests for `clampViewTo` (existing limits unchanged), `frameRange` (centring, 90% span, clamp at 64 px/sample for a 1-sample range) and `annotationAt` (hit, miss, tolerance edge, dense block)
+- [x] 2.1 Create `src/renderer/src/view.ts` with `clampViewTo`, moved unchanged from `clampView` in `actions.ts`; keep `clampView` as a wrapper
+- [x] 2.2 Add `frameRange(start, end, plotWidth)` (range centred, spanning 90% of the width)
+- [x] 2.3 Add `annotationAt(anns, sample, tolerance)` returning the annotation (or merged block) covering the sample, or null
+- [x] 2.4 Tests for `clampViewTo` (existing limits unchanged), `frameRange` (centring, 90% span, clamp at 64 px/sample for a 1-sample range) and `annotationAt` (hit, miss, tolerance edge, dense block)
 
 ## 3. Interaction
 
