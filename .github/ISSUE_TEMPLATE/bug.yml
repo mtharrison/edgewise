@@ -1,0 +1,38 @@
+name: Bug report
+description: Something in Edgewise doesn't work as expected
+labels: [needs-triage]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Select the demo device at 20 MHz
+        2. Add a UART decoder
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      description: Demo device, or the board's name as shown in the device picker.
+  - type: input
+    id: version
+    attributes:
+      label: Edgewise version and OS
+      placeholder: 0.1.0, macOS 26.1
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Screenshots, a `.sr` file that shows the problem, error messages.

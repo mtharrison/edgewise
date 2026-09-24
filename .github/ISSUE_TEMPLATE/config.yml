@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/mtharrison/edgewise/discussions
+    about: Ask a question or float an idea before it becomes a request.
+  - name: Backlog
+    url: https://github.com/users/mtharrison/projects/3
+    about: See what's planned and in progress.
