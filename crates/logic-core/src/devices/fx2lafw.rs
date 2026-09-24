@@ -257,10 +257,24 @@ impl Driver for Fx2 {
                 return Err(format!("Unsupported fx2lafw firmware version {major}.x"));
             }
         }
-        if dev.active_configuration().map(|c| c.configuration_value()).ok() != Some(1) {
-            let _ = dev.set_configuration(1);
-        }
-        let iface = dev.claim_interface(0).map_err(|e| format!("Claiming interface: {e}"))?;
+        // Right after a replug the OS may not have finished settling the device's
+        // configuration yet, so claiming interface 0 immediately can fail with
+        // "not found" even though the device is present. Retry for a bit before
+        // giving up, re-issuing SET_CONFIGURATION each time in case the first one
+        // raced with the kernel's own enumeration.
+        let claim_deadline = Instant::now() + Duration::from_secs(2);
+        let iface = loop {
+            if dev.active_configuration().map(|c| c.configuration_value()).ok() != Some(1) {
+                let _ = dev.set_configuration(1);
+            }
+            match dev.claim_interface(0) {
+                Ok(iface) => break iface,
+                Err(_) if Instant::now() < claim_deadline => {
+                    std::thread::sleep(Duration::from_millis(100));
+                }
+                Err(e) => return Err(format!("Claiming interface: {e}")),
+            }
+        };
 
         // ~20 ms per transfer keeps stop latency low; 32 in flight rides out host hiccups.
         const INFLIGHT: usize = 32;
