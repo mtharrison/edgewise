@@ -35,6 +35,8 @@ export const engine = {
   measure: (channel: number, sample: number): Promise<Measurement | null> => call('measure', channel, sample),
   findEdge: (channel: number, from: number, forward: boolean): Promise<number | null> =>
     call('findEdge', channel, from, forward),
+  burstAt: (channel: number, sample: number, maxGap: number, tolerance: number): Promise<{ start: number; end: number } | null> =>
+    call('burstAt', channel, sample, maxGap, tolerance),
   addDecoder: (cfg: DecoderConfig): Promise<number> => call('addDecoder', cfg),
   updateDecoder: (id: number, cfg: DecoderConfig): Promise<void> => call('updateDecoder', id, cfg),
   removeDecoder: (id: number): Promise<void> => call('removeDecoder', id),

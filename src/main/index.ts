@@ -15,7 +15,7 @@ const engine = new Engine()
 
 // Methods the renderer may call. Everything else stays in the main process.
 const ENGINE_METHODS = new Set([
-  'listDevices', 'start', 'stop', 'status', 'render', 'samples', 'measure', 'findEdge',
+  'listDevices', 'start', 'stop', 'status', 'render', 'samples', 'measure', 'findEdge', 'burstAt',
   'addDecoder', 'updateDecoder', 'removeDecoder', 'decode', 'decoderRows',
   'annotations', 'annotationPage', 'annotationIndex', 'load', 'save', 'exportVcd'
 ])

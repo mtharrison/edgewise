@@ -35,6 +35,13 @@ export interface Highlight {
   end: number
 }
 
+/** Burst of transitions on a channel under the pointer while Cmd/Ctrl is held. */
+export interface Burst {
+  channel: number
+  start: number
+  end: number
+}
+
 export interface Frame {
   view: View
   samplerate: number
@@ -50,6 +57,7 @@ export interface Frame {
   measurement: Measurement | null
   hoverChannel: number | null
   highlight: Highlight | null
+  burst: Burst | null
 }
 
 export function annKey(id: number, row: number) {
@@ -113,6 +121,19 @@ export function drawFrame(ctx: CanvasRenderingContext2D, w: number, h: number, d
       const a = x(f.measurement.start)
       ctx.fillRect(a, r.y + 2, x(f.measurement.end) - a, r.h - 4)
     }
+  }
+
+  // Burst under the pointer.
+  const burstRow = f.burst && f.rows.find((r) => r.kind === 'channel' && r.ch.index === f.burst!.channel)
+  if (f.burst && burstRow?.kind === 'channel') {
+    const x0 = Math.max(x(f.burst.start), -10)
+    const x1 = Math.min(x(f.burst.end), w + 10)
+    const bw = Math.max(x1 - x0, 1)
+    ctx.fillStyle = hexA(burstRow.ch.color, 0.18)
+    ctx.fillRect(x0, burstRow.y + 2, bw, burstRow.h - 4)
+    ctx.strokeStyle = burstRow.ch.color
+    ctx.lineWidth = 1.5
+    ctx.strokeRect(x0 + 0.75, burstRow.y + 2.75, Math.max(bw - 1.5, 0), burstRow.h - 5.5)
   }
 
   for (const r of f.rows) {

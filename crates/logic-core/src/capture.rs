@@ -378,6 +378,53 @@ impl Snapshot {
         None
     }
 
+    /// First and last transition of the burst at `sample`: a run of transitions
+    /// whose consecutive gaps are all < `max_gap`. The pointer may be up to
+    /// `tolerance` samples outside the burst (clamped below `max_gap`, so the
+    /// nearest transition decides). A lone transition is not a burst.
+    /// Each end stops extending after `budget` steps.
+    pub fn burst_at(&self, mask: u16, sample: u64, max_gap: u64, tolerance: u64, budget: usize) -> Option<(u64, u64)> {
+        if self.len == 0 || max_gap < 2 {
+            return None;
+        }
+        let tolerance = tolerance.min(max_gap - 1);
+        let near = |a: u64, b: u64| b - a < max_gap;
+        let p = self.prev_change(mask, sample);
+        let n = self.next_change(mask, sample);
+        // A neighbouring pair of transitions to grow from.
+        let (mut first, mut last) = match (p, n) {
+            (Some(p), Some(n)) if near(p, n) => (p, n),
+            _ => {
+                let left = p
+                    .filter(|&p| sample - p <= tolerance)
+                    .and_then(|p| self.prev_change(mask, p - 1).filter(|&q| near(q, p)).map(|q| (sample - p, q, p)));
+                let right = n
+                    .filter(|&n| n - sample <= tolerance)
+                    .and_then(|n| self.next_change(mask, n).filter(|&r| near(n, r)).map(|r| (n - sample, n, r)));
+                match (left, right) {
+                    (Some(l), Some(r)) => if l.0 <= r.0 { (l.1, l.2) } else { (r.1, r.2) },
+                    (Some(l), None) => (l.1, l.2),
+                    (None, Some(r)) => (r.1, r.2),
+                    (None, None) => return None,
+                }
+            }
+        };
+        // Grow each end by jumping to the furthest transition within max_gap.
+        for _ in 0..budget {
+            match self.prev_change(mask, last + max_gap - 1) {
+                Some(e) if e > last => last = e,
+                _ => break,
+            }
+        }
+        for _ in 0..budget {
+            match self.next_change(mask, first.saturating_sub(max_gap)) {
+                Some(e) if e < first => first = e,
+                _ => break,
+            }
+        }
+        Some((first, last))
+    }
+
     /// Per-pixel (first, mask) pairs for `width` pixels starting at sample
     /// `start`, `spp` samples per pixel. Each pixel's range includes the first
     /// sample of the next pixel so boundary transitions are not lost.
@@ -494,5 +541,114 @@ mod tests {
         }
         assert_eq!(s.next_change(4, CHUNK as u64 - 1), Some(CHUNK as u64));
         assert_eq!(s.prev_change(4, CHUNK as u64), Some(CHUNK as u64));
+    }
+
+    /// Reference burst search over a plain edge list.
+    fn brute_burst(edges: &[u64], sample: u64, max_gap: u64, tol: u64) -> Option<(u64, u64)> {
+        let mut runs = Vec::new();
+        let mut i = 0;
+        while i < edges.len() {
+            let mut j = i;
+            while j + 1 < edges.len() && edges[j + 1] - edges[j] < max_gap {
+                j += 1;
+            }
+            if j > i {
+                runs.push((edges[i], edges[j]));
+            }
+            i = j + 1;
+        }
+        let dist = |&(a, b): &(u64, u64)| if sample < a { a - sample } else { sample.saturating_sub(b) };
+        let mut best: Option<(u64, u64)> = None;
+        for r in runs {
+            let d = dist(&r);
+            if d <= tol && best.map_or(true, |b| d < dist(&b)) {
+                best = Some(r);
+            }
+        }
+        best
+    }
+
+    #[test]
+    fn burst_matches_brute_force() {
+        let mut seed = 5;
+        let mut v = 0u8;
+        // Bursts of fast toggles on bit 0 separated by long idle stretches; noise on bit 1.
+        let mut in_burst = false;
+        let data: Vec<u8> = (0..(CHUNK + CHUNK / 4))
+            .map(|_| {
+                if lcg(&mut seed) % if in_burst { 3000 } else { 20_000 } == 0 {
+                    in_burst = !in_burst;
+                }
+                if lcg(&mut seed) % if in_burst { 40 } else { 200_000 } == 0 {
+                    v ^= 1;
+                }
+                if lcg(&mut seed) % 50 == 0 {
+                    v ^= 2;
+                }
+                v
+            })
+            .collect();
+        let edges: Vec<u64> = (1..data.len()).filter(|&i| (data[i] ^ data[i - 1]) & 1 != 0).map(|i| i as u64).collect();
+        let s = cap_from(&data);
+        let mut hits = 0;
+        for _ in 0..2000 {
+            // Bias pointers towards edges so the tolerance and gap cases are exercised.
+            let e = edges[lcg(&mut seed) as usize % edges.len()];
+            let sample = (e + lcg(&mut seed) % 400).saturating_sub(200).min(data.len() as u64 - 1);
+            let max_gap = 2 + lcg(&mut seed) % 300;
+            let tol = lcg(&mut seed) % max_gap;
+            let want = brute_burst(&edges, sample, max_gap, tol);
+            hits += want.is_some() as usize;
+            assert_eq!(s.burst_at(1, sample, max_gap, tol, usize::MAX), want, "sample {sample} gap {max_gap} tol {tol}");
+        }
+        assert!(hits > 500, "too few bursts exercised: {hits}");
+    }
+
+    /// Idle, burst of 4 edges at 1000..1030, idle, lone edge at 5000, idle.
+    fn simple_burst() -> Snapshot {
+        let mut data = vec![0u8; 10_000];
+        for (i, x) in data.iter_mut().enumerate() {
+            let toggles = [1000, 1010, 1020, 1030, 5000].iter().filter(|&&t| i >= t).count();
+            *x = (toggles % 2) as u8 | 2 * ((i / 7) % 2) as u8; // bit 1 toggles every 7 samples
+        }
+        cap_from(&data)
+    }
+
+    #[test]
+    fn burst_cases() {
+        let s = simple_burst();
+        let b = Some((1000, 1030));
+        assert_eq!(s.burst_at(1, 1010, 50, 0, 100), b, "on a transition");
+        assert_eq!(s.burst_at(1, 1015, 50, 0, 100), b, "in a short gap");
+        assert_eq!(s.burst_at(1, 3000, 50, 0, 100), None, "idle stretch");
+        assert_eq!(s.burst_at(1, 995, 50, 5, 100), b, "within tolerance before");
+        assert_eq!(s.burst_at(1, 1035, 50, 5, 100), b, "within tolerance after");
+        assert_eq!(s.burst_at(1, 994, 50, 5, 100), None, "just outside tolerance");
+        assert_eq!(s.burst_at(1, 5000, 50, 5, 100), None, "lone transition");
+        assert_eq!(s.burst_at(1, 1015, 10, 0, 100), None, "gaps not shorter than max_gap");
+        assert_eq!(s.burst_at(1, 1015, 11, 0, 100), b);
+        assert_eq!(s.burst_at(1, 1015, 50, 0, 1), Some((1000, 1030)), "one jump covers the burst");
+        assert_eq!(s.burst_at(2, 3000, 8, 0, 10_000), Some((7, 9996)), "other channel");
+    }
+
+    #[test]
+    fn burst_at_capture_edges() {
+        let data: Vec<u8> = (0..1000).map(|i| ((i / 3) % 2) as u8).collect();
+        let s = cap_from(&data);
+        assert_eq!(s.burst_at(1, 3, 5, 0, 1000), Some((3, 999)));
+        assert_eq!(s.burst_at(1, 0, 5, 0, 1000), None, "before the first transition");
+        assert_eq!(s.burst_at(1, 999, 5, 0, 1000), Some((3, 999)));
+        assert_eq!(s.burst_at(1, 5000, 5, 0, 1000), None, "past the end");
+        assert_eq!(Snapshot::empty().burst_at(1, 0, 5, 0, 1000), None);
+    }
+
+    #[test]
+    fn burst_stops_at_budget() {
+        // A clock toggling every 4 samples for the whole capture.
+        let data: Vec<u8> = (0..100_000).map(|i| ((i / 4) % 2) as u8).collect();
+        let s = cap_from(&data);
+        let (a, b) = s.burst_at(1, 50_000, 10, 0, 3).unwrap();
+        assert!(a < 50_000 && a > 49_900 && b > 50_000 && b < 50_100, "{a}..{b}");
+        assert_eq!(s.burst_at(1, 50_000, 10, 0, usize::MAX), Some((4, 99_996)));
     }
 }

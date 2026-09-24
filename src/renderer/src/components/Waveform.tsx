@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
 import { ArrowDownRight, ArrowUpRight, ChevronsDown, ChevronsUp, EyeOff, Zap } from 'lucide-react'
 import { bridge, engine } from '../api'
-import { cycleTrigger, frameAnnotation, panBy, updateChannel, zoomAt } from '../actions'
-import { annKey, drawFrame, type Frame, type Highlight } from '../draw'
+import { cycleTrigger, frameSpan, panBy, updateChannel, zoomAt } from '../actions'
+import { annKey, drawFrame, type Burst, type Frame, type Highlight } from '../draw'
 import { fmtFreq, fmtTime } from '../format'
 import { CH_H, layoutRows, RULER_H, type Row } from '../layout'
 import { get, set, useStore } from '../store'
@@ -20,6 +20,10 @@ const TRIGGER_ICON: Record<TriggerCondition, ReactElement> = {
 // Cmd on macOS; Ctrl elsewhere (on macOS, Ctrl+click is a right-click).
 const MOD_KEY = bridge.platform === 'darwin' ? 'Meta' : 'Control'
 const isMod = (e: { metaKey: boolean; ctrlKey: boolean }) => (MOD_KEY === 'Meta' ? e.metaKey : e.ctrlKey)
+
+// A burst's gaps are all shorter than this; the pointer may be this close outside one (CSS px).
+const BURST_GAP_PX = 8
+const HIT_PX = 2
 
 export function Waveform() {
   const channels = useStore((s) => s.channels)
@@ -40,6 +44,9 @@ export function Waveform() {
   const pointer = useRef<{ x: number; y: number } | null>(null)
   const highlightRef = useRef<Highlight | null>(null)
   const [highlight, setHighlight] = useState<Highlight | null>(null)
+  const burstRef = useRef<Burst | null>(null)
+  const [burst, setBurst] = useState<Burst | null>(null)
+  const burstReq = useRef({ busy: false, again: false })
 
   // ---- drawing: coalesced to one frame, one engine round-trip in flight ----
   const draw = useRef({ pending: false, busy: false, again: false })
@@ -97,6 +104,7 @@ export function Waveform() {
         highlightRef.current = hl
         setHighlight(hl)
       }
+      updateBurst()
 
       const ctx = canvas.getContext('2d')!
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
@@ -113,7 +121,8 @@ export function Waveform() {
         hover: st.hover,
         measurement: st.measurement,
         hoverChannel: st.hover?.channel ?? null,
-        highlight: hl
+        highlight: hl,
+        burst: burstRef.current
       })
     } finally {
       d.busy = false
@@ -184,8 +193,54 @@ export function Waveform() {
     if (row?.kind !== 'decoder') return null
     const { view } = get()
     const anns = cache.current.anns.get(annKey(row.dec.id, row.row)) ?? []
-    const a = annotationAt(anns, view.start + p.x * view.spp, 2 * view.spp)
+    const a = annotationAt(anns, view.start + p.x * view.spp, HIT_PX * view.spp)
     return a && { decoder: row.dec.id, row: row.row, start: a.start, end: a.end }
+  }
+
+  /** Channel and sample under the pointer while the modifier is held over a channel row. */
+  const burstTarget = () => {
+    const p = pointer.current
+    if (!modRef.current || !p || p.y < RULER_H) return null
+    const row = rowAt(p.y)
+    if (row?.kind !== 'channel') return null
+    const { view } = get()
+    const sample = view.start + p.x * view.spp
+    return sample < 0 ? null : { channel: row.ch.index, sample, spp: view.spp }
+  }
+
+  const findBurst = async (t: { channel: number; sample: number; spp: number }): Promise<Burst | null> => {
+    const r = await engine.burstAt(t.channel, t.sample, BURST_GAP_PX * t.spp, HIT_PX * t.spp)
+    return r && { channel: t.channel, ...r }
+  }
+
+  /** Refreshes the burst highlight; one engine request in flight, latest wins. */
+  const updateBurst = async () => {
+    const q = burstReq.current
+    if (q.busy) {
+      q.again = true
+      return
+    }
+    const t = burstTarget()
+    let next: Burst | null = null
+    if (t) {
+      q.busy = true
+      try {
+        next = await findBurst(t)
+      } finally {
+        q.busy = false
+      }
+      if (q.again) {
+        q.again = false
+        updateBurst()
+        return
+      }
+    }
+    const prev = burstRef.current
+    if (next?.channel !== prev?.channel || next?.start !== prev?.start || next?.end !== prev?.end) {
+      burstRef.current = next
+      setBurst(next)
+      requestDraw()
+    }
   }
 
   // Pressing or releasing the modifier updates the highlight without moving the pointer.
@@ -222,10 +277,17 @@ export function Waveform() {
     const { view, markers } = get()
     pointer.current = { x, y }
     modRef.current = isMod(e)
-    if (modRef.current && y >= RULER_H && rowAt(y)?.kind === 'decoder') {
+    const row = y >= RULER_H ? rowAt(y) : undefined
+    if (modRef.current && row?.kind === 'decoder') {
       // Modified click frames the annotation; it never pans or selects a table row.
       const hit = hitTest()
-      if (hit) frameAnnotation(hit.start, hit.end)
+      if (hit) frameSpan(hit.start, hit.end)
+      return
+    }
+    if (modRef.current && row?.kind === 'channel') {
+      // Modified click frames the burst, queried fresh at the click; it never pans.
+      const t = burstTarget()
+      if (t) findBurst(t).then((b) => b && frameSpan(b.start, b.end))
       return
     }
     ;(e.target as Element).setPointerCapture(e.pointerId)
@@ -344,7 +406,7 @@ export function Waveform() {
         }}
         onDoubleClick={(e) => local(e).y < RULER_H && set({ markers: { a: null, b: null } })}
         onWheel={onWheel}
-        style={highlight ? { cursor: 'pointer' } : undefined}
+        style={highlight || burst ? { cursor: 'pointer' } : undefined}
       >
         <canvas ref={canvasRef} />
         <HoverTip />
