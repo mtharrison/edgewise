@@ -23,6 +23,8 @@ echo "#$pr ($branch @ ${sha:0:7}) at $dir"
 
 cd "$dir"
 [ node_modules/.package-lock.json -nt package-lock.json ] 2>/dev/null || npm ci
+# npm's allowScripts setting can skip Electron's install script, leaving no binary.
+[ -e node_modules/electron/path.txt ] || node node_modules/electron/install.js
 if grep -q CARGO_TARGET_DIR scripts/build-native.mjs; then
   export CARGO_TARGET_DIR="$root/target"
 fi
