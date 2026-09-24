@@ -22,4 +22,4 @@
 
 - [x] 4.1 `npm test` and `npm run typecheck` pass
 - [x] 4.2 By hand with the demo device: every scenario in the spec delta, including zoomed-out burst framing and highlight on key press without moving
-- [ ] 4.3 Run `/opsx:verify`, then archive the change in this PR
+- [x] 4.3 Run `/opsx:verify`, then archive the change in this PR
