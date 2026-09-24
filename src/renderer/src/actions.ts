@@ -118,7 +118,7 @@ export function centerOn(sample: number, width?: number) {
 }
 
 /** Zooms and pans so [start, end] fills the plot width with a small margin. */
-export function frameAnnotation(start: number, end: number) {
+export function frameSpan(start: number, end: number) {
   const v = frameRange(start, end, get().plotWidth)
   set({ view: clampView(v.start, v.spp), follow: false })
 }

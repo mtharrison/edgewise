@@ -6,10 +6,10 @@
 
 ## 2. Interaction
 
-- [ ] 2.1 Rename `frameAnnotation` to `frameSpan` in `actions.ts` and its caller
-- [ ] 2.2 In `Waveform.tsx`, while the modifier is held over a channel row, request `burstAt` (one in flight, latest wins) with an 8 px idle threshold and 2 px tolerance; keep the result as a burst highlight; clear it on key release, blur, view change or leaving the row
-- [ ] 2.3 On modified pointer-down over a channel row: query `burstAt` at the click and frame it if found; never start a pan
-- [ ] 2.4 Draw the burst highlight in `draw.ts` (channel-coloured band and outline) and show a pointer cursor over it
+- [x] 2.1 Rename `frameAnnotation` to `frameSpan` in `actions.ts` and its caller
+- [x] 2.2 In `Waveform.tsx`, while the modifier is held over a channel row, request `burstAt` (one in flight, latest wins) with an 8 px idle threshold and 2 px tolerance; keep the result as a burst highlight; clear it on key release, blur, view change or leaving the row
+- [x] 2.3 On modified pointer-down over a channel row: query `burstAt` at the click and frame it if found; never start a pan
+- [x] 2.4 Draw the burst highlight in `draw.ts` (channel-coloured band and outline) and show a pointer cursor over it
 
 ## 3. Verify and archive
 
