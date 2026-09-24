@@ -53,3 +53,17 @@ jobs:
             Stop after opening the draft PR. Do not implement.
           claude_args: >-
             --allowedTools "Bash(gh:*),Bash(git:*),Bash(npx openspec:*),Read,Write,Edit,Glob,Grep,Skill"
+
+      # PRs opened with the Claude app token trigger no workflows. Reopening with
+      # the owner's token starts CI and Board sync. Claude never sees this token.
+      - name: Trigger PR workflows
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          N: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          for pr in $(gh pr list -R "$REPO" --state open --json number,headRefName \
+            --jq ".[] | select(.headRefName | startswith(\"$N-\")) | .number"); do
+            gh pr close "$pr" -R "$REPO" && gh pr reopen "$pr" -R "$REPO"
+          done
