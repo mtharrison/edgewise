@@ -178,6 +178,41 @@ impl Fx2 {
         }
         Err("Device did not re-enumerate after firmware upload".into())
     }
+
+    /// Claim interface 0, configuring the device if that's what's missing.
+    ///
+    /// `active_configuration()` can't be trusted to spot an unconfigured
+    /// device: on macOS nusb reports the sole configuration of a
+    /// single-config device as active without asking it. So when the claim
+    /// fails, set configuration 1 regardless and try again, and if that
+    /// doesn't work either, reopen the device from a fresh enumeration in
+    /// case this handle predates it settling after firmware upload or a replug.
+    fn claim(&self, mut dev: nusb::Device) -> Result<nusb::Interface, String> {
+        let deadline = Instant::now() + Duration::from_secs(3);
+        let mut attempts = 0u32;
+        loop {
+            attempts += 1;
+            let err = match dev.claim_interface(0) {
+                Ok(iface) => return Ok(iface),
+                Err(e) => e,
+            };
+            let set = dev.set_configuration(1);
+            if set.is_ok() {
+                std::thread::sleep(Duration::from_millis(100));
+                if let Ok(iface) = dev.claim_interface(0) {
+                    return Ok(iface);
+                }
+            }
+            if Instant::now() >= deadline {
+                let set = set.map_or_else(|e| format!("failed: {e}"), |_| "ok".into());
+                return Err(format!("Claiming interface: {err} (after {attempts} attempts, set configuration {set})"));
+            }
+            drop(dev);
+            std::thread::sleep(Duration::from_millis(250));
+            let info = self.find().ok_or("Device disconnected while claiming interface")?;
+            dev = info.open().map_err(|e| format!("Reopening device: {e}"))?;
+        }
+    }
 }
 
 /// Clock source and divider for a sample rate, matching libsigrok.
@@ -257,35 +292,7 @@ impl Driver for Fx2 {
                 return Err(format!("Unsupported fx2lafw firmware version {major}.x"));
             }
         }
-        // Right after firmware upload or a replug the OS may not have finished
-        // settling the device's configuration yet, so claiming interface 0
-        // immediately can fail with "not found" even though the device is
-        // present. Nudge it into configuration 1 at most once: some cheap
-        // fx2lafw clones perform their own soft disconnect/reconnect when they
-        // receive SET_CONFIGURATION, so re-issuing it on every retry can keep
-        // knocking the interface back offline instead of letting it settle.
-        // After that, just retry the claim itself for a couple of seconds.
-        if dev.active_configuration().map(|c| c.configuration_value()).ok() != Some(1) {
-            let _ = dev.set_configuration(1);
-            std::thread::sleep(Duration::from_millis(200));
-        }
-        let claim_deadline = Instant::now() + Duration::from_secs(2);
-        let mut attempts = 0u32;
-        let iface = loop {
-            attempts += 1;
-            match dev.claim_interface(0) {
-                Ok(iface) => break iface,
-                Err(_) if Instant::now() < claim_deadline => {
-                    std::thread::sleep(Duration::from_millis(100));
-                }
-                Err(e) => {
-                    let cfg = dev.active_configuration().map(|c| c.configuration_value()).ok();
-                    return Err(format!(
-                        "Claiming interface: {e} (after {attempts} attempts, active configuration: {cfg:?})"
-                    ));
-                }
-            }
-        };
+        let iface = self.claim(dev)?;
 
         // ~20 ms per transfer keeps stop latency low; 32 in flight rides out host hiccups.
         const INFLIGHT: usize = 32;
