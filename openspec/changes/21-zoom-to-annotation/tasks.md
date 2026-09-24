@@ -1,7 +1,7 @@
 ## 1. Test setup
 
 - [x] 1.1 Add Vitest as a dev dependency and change `npm test` to run the Rust tests then `vitest run`
-- [ ] 1.2 Confirm CI still passes with the new test step
+- [x] 1.2 Confirm CI still passes with the new test step
 
 ## 2. View maths
 
@@ -20,6 +20,6 @@
 
 ## 4. Verify and archive
 
-- [ ] 4.1 `npm test` and `npm run typecheck` pass
-- [ ] 4.2 By hand with the demo device: every scenario in the spec delta, including zoomed-out burst framing and highlight on key press without moving
+- [x] 4.1 `npm test` and `npm run typecheck` pass
+- [x] 4.2 By hand with the demo device: every scenario in the spec delta, including zoomed-out burst framing and highlight on key press without moving
 - [ ] 4.3 Run `/opsx:verify`, then archive the change in this PR
