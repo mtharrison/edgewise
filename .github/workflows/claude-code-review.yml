@@ -12,6 +12,8 @@ on:
 
 jobs:
   claude-review:
+    # Skip drafts (proposal-only PRs) and Dependabot (no access to the secret).
+    if: ${{ !github.event.pull_request.draft && github.event.pull_request.user.login != 'dependabot[bot]' }}
     # Optional: Filter by PR author
     # if: |
     #   github.event.pull_request.user.login == 'external-contributor' ||
