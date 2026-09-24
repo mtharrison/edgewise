@@ -1,8 +1,8 @@
 ## 1. Burst search in the core
 
-- [ ] 1.1 Add `Snapshot::burst_at(mask, sample, max_gap, tolerance, budget)` in `capture.rs`, using `next_change` / `prev_change` window jumps as in design.md
-- [ ] 1.2 Rust tests: pointer on a transition, pointer in a short gap inside a burst, pointer on an idle stretch, pointer within tolerance just outside a burst, lone transition, burst at the capture's start and end, bursts crossing a chunk boundary, a dense stretch longer than the budget, other channels' transitions ignored
-- [ ] 1.3 Expose `burst_at` in `logic-node`, add `burstAt` to the main process method list and `api.ts`
+- [x] 1.1 Add `Snapshot::burst_at(mask, sample, max_gap, tolerance, budget)` in `capture.rs`, using `next_change` / `prev_change` window jumps as in design.md
+- [x] 1.2 Rust tests: pointer on a transition, pointer in a short gap inside a burst, pointer on an idle stretch, pointer within tolerance just outside a burst, lone transition, burst at the capture's start and end, bursts crossing a chunk boundary, a dense stretch longer than the budget, other channels' transitions ignored
+- [x] 1.3 Expose `burst_at` in `logic-node`, add `burstAt` to the main process method list and `api.ts`
 
 ## 2. Interaction
 

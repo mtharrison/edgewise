@@ -85,6 +85,14 @@ impl Engine {
         r.map(|v| v as f64)
     }
 
+    /// First and last transition of the burst at `sample` on a channel, or null.
+    #[napi]
+    pub fn burst_at(&self, channel: u32, sample: f64, max_gap: f64, tolerance: f64) -> Result<Value> {
+        let s = self.inner.snapshot();
+        let r = s.burst_at(1u16 << channel, sample.max(0.0) as u64, max_gap.ceil() as u64, tolerance.ceil() as u64, 10_000);
+        Ok(r.map_or(Value::Null, |(start, end)| json!({ "start": start, "end": end })))
+    }
+
     #[napi]
     pub fn add_decoder(&self, config: Value) -> Result<u32> {
         let cfg: DecoderConfig = from_json(config)?;
