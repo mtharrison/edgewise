@@ -257,22 +257,33 @@ impl Driver for Fx2 {
                 return Err(format!("Unsupported fx2lafw firmware version {major}.x"));
             }
         }
-        // Right after a replug the OS may not have finished settling the device's
-        // configuration yet, so claiming interface 0 immediately can fail with
-        // "not found" even though the device is present. Retry for a bit before
-        // giving up, re-issuing SET_CONFIGURATION each time in case the first one
-        // raced with the kernel's own enumeration.
+        // Right after firmware upload or a replug the OS may not have finished
+        // settling the device's configuration yet, so claiming interface 0
+        // immediately can fail with "not found" even though the device is
+        // present. Nudge it into configuration 1 at most once: some cheap
+        // fx2lafw clones perform their own soft disconnect/reconnect when they
+        // receive SET_CONFIGURATION, so re-issuing it on every retry can keep
+        // knocking the interface back offline instead of letting it settle.
+        // After that, just retry the claim itself for a couple of seconds.
+        if dev.active_configuration().map(|c| c.configuration_value()).ok() != Some(1) {
+            let _ = dev.set_configuration(1);
+            std::thread::sleep(Duration::from_millis(200));
+        }
         let claim_deadline = Instant::now() + Duration::from_secs(2);
+        let mut attempts = 0u32;
         let iface = loop {
-            if dev.active_configuration().map(|c| c.configuration_value()).ok() != Some(1) {
-                let _ = dev.set_configuration(1);
-            }
+            attempts += 1;
             match dev.claim_interface(0) {
                 Ok(iface) => break iface,
                 Err(_) if Instant::now() < claim_deadline => {
                     std::thread::sleep(Duration::from_millis(100));
                 }
-                Err(e) => return Err(format!("Claiming interface: {e}")),
+                Err(e) => {
+                    let cfg = dev.active_configuration().map(|c| c.configuration_value()).ok();
+                    return Err(format!(
+                        "Claiming interface: {e} (after {attempts} attempts, active configuration: {cfg:?})"
+                    ));
+                }
             }
         };
 
