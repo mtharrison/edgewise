@@ -21,16 +21,24 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
       REPO: ${{ github.repository }}
+      PROJECT_ID: PVT_kwHOAA36YM4BkieC
     steps:
+      # Queries by project ID: `gh project item-list --owner` fails with this token.
       - name: Label Ready cards
         run: |
           set -euo pipefail
-          gh project item-list 3 --owner mtharrison --format json --limit 500 \
-            --jq ".items[] | select(.status == \"Ready\" and .content.type == \"Issue\" and .content.repository == \"$REPO\") | .content.number" |
+          gh api graphql --paginate -f id="$PROJECT_ID" -f query='
+            query($id: ID!, $endCursor: String) {
+              node(id: $id) { ... on ProjectV2 { items(first: 100, after: $endCursor) {
+                pageInfo { hasNextPage endCursor }
+                nodes {
+                  status: fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
+                  content { ... on Issue { number state repository { nameWithOwner } labels(first: 50) { nodes { name } } } }
+                }
+              } } }
+            }' \
+            --jq ".data.node.items.nodes[] | select(.status.name == \"Ready\" and .content.state == \"OPEN\" and .content.repository.nameWithOwner == \"$REPO\" and ([.content.labels.nodes[].name] | index(\"ready\") | not)) | .content.number" |
           while read -r n; do
-            if gh issue view "$n" -R "$REPO" --json state,labels \
-              -q '.state == "OPEN" and ([.labels[].name] | index("ready") | not)' | grep -qx true; then
-              gh issue edit "$n" -R "$REPO" --add-label ready
-              echo "#$n labelled ready"
-            fi
+            gh issue edit "$n" -R "$REPO" --add-label ready
+            echo "#$n labelled ready"
           done
