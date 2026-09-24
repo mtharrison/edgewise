@@ -8,9 +8,9 @@
 
 ## 2. Match the same FX2 model on reappearance
 
-- [ ] 2.1 Add a small helper (e.g. `sameFx2Model(idA, idB)`) that compares the `vid:pid` prefix of two FX2 device ids, with a comment pointing at `crates/logic-core/src/devices/fx2lafw.rs` for the id format; add `src/renderer/src/actions.test.ts` covering: same vid:pid/different port matches, different vid:pid does not match, and non-`fx2:` ids (demo) never match
-- [ ] 2.2 In `refreshDevices`, when the previously selected device is disconnected, look for a newly listed device whose id matches via `sameFx2Model`; if found, select it (reusing `selectDevice`'s sample-rate/channel-reset logic) and set `deviceConnected: true`
-- [ ] 2.3 Add a unit test for `refreshDevices` (mocking `engine.listDevices`) covering: board disappears and stays selected as disconnected, same-model board reappears on a different port and is reselected, and a device with a different vid:pid does not trigger reselection
+- [x] 2.1 Add a small helper (e.g. `sameFx2Model(idA, idB)`) that compares the `vid:pid` prefix of two FX2 device ids, with a comment pointing at `crates/logic-core/src/devices/fx2lafw.rs` for the id format; add `src/renderer/src/actions.test.ts` covering: same vid:pid/different port matches, different vid:pid does not match, and non-`fx2:` ids (demo) never match
+- [x] 2.2 In `refreshDevices`, when the previously selected device is disconnected, look for a newly listed device whose id matches via `sameFx2Model`; if found, select it (reusing `selectDevice`'s sample-rate/channel-reset logic) and set `deviceConnected: true`
+- [x] 2.3 Add a unit test for `refreshDevices` (mocking `engine.listDevices`) covering: board disappears and stays selected as disconnected, same-model board reappears on a different port and is reselected, and a device with a different vid:pid does not trigger reselection
 
 ## 3. Reflect disconnection in the top bar
 

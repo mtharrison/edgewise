@@ -10,6 +10,21 @@ export function toast(msg: string) {
   setTimeout(() => get().toast === msg && set({ toast: null }), 4000)
 }
 
+/**
+ * True if two device ids are the same FX2 board model (matched by USB vendor:product
+ * id, ignoring the port). Ids are `fx2:{vid}:{pid}:{port}` (see
+ * `crates/logic-core/src/devices/fx2lafw.rs`); non-fx2 ids (e.g. the demo device)
+ * never match.
+ */
+export function sameFx2Model(idA: string, idB: string): boolean {
+  const vidPid = (id: string) => {
+    const [driver, vid, pid] = id.split(':')
+    return driver === 'fx2' && vid && pid ? `${vid}:${pid}` : null
+  }
+  const a = vidPid(idA)
+  return a !== null && a === vidPid(idB)
+}
+
 export async function refreshDevices() {
   const list = await engine.listDevices()
   const { deviceId, devices: prevDevices } = get()
@@ -20,6 +35,12 @@ export async function refreshDevices() {
   }
   if (list.find((d) => d.id === deviceId)) {
     set({ devices: list, deviceConnected: true })
+    return
+  }
+  const reappeared = list.find((d) => sameFx2Model(d.id, deviceId))
+  if (reappeared) {
+    set({ devices: list })
+    selectDevice(reappeared.id)
     return
   }
   const remembered = prevDevices.find((d) => d.id === deviceId)
