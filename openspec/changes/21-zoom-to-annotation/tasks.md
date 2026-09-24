@@ -12,11 +12,11 @@
 
 ## 3. Interaction
 
-- [ ] 3.1 Add `frameAnnotation(start, end)` in `actions.ts`: set the clamped view and turn follow off
-- [ ] 3.2 In `Waveform.tsx`, track the platform modifier from pointer events and window `keydown`/`keyup`, clear it on `blur`, and keep the highlighted annotation (decoder, row, start, end) in state
-- [ ] 3.3 On modified pointer-down over a decoder row: frame the annotation under the pointer if there is one; never start a pan or select a table row
-- [ ] 3.4 Draw the highlighted annotation with a brighter outline and fill in `draw.ts`; show a pointer cursor over it
-- [ ] 3.5 Add "⌘ click zoom to packet" (Ctrl on other platforms) to the status bar hints
+- [x] 3.1 Add `frameAnnotation(start, end)` in `actions.ts`: set the clamped view and turn follow off
+- [x] 3.2 In `Waveform.tsx`, track the platform modifier from pointer events and window `keydown`/`keyup`, clear it on `blur`, and keep the highlighted annotation (decoder, row, start, end) in state
+- [x] 3.3 On modified pointer-down over a decoder row: frame the annotation under the pointer if there is one; never start a pan or select a table row
+- [x] 3.4 Draw the highlighted annotation with a brighter outline and fill in `draw.ts`; show a pointer cursor over it
+- [x] 3.5 Add "⌘ click zoom to packet" (Ctrl on other platforms) to the status bar hints
 
 ## 4. Verify and archive
 

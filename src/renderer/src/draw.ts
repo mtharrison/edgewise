@@ -27,6 +27,14 @@ const CLASS_COLORS: Record<number, string> = {
   [ANN.ERROR]: '#f03e3e'
 }
 
+/** Annotation (or merged block) under the pointer while Cmd/Ctrl is held. */
+export interface Highlight {
+  decoder: number
+  row: number
+  start: number
+  end: number
+}
+
 export interface Frame {
   view: View
   samplerate: number
@@ -41,6 +49,7 @@ export interface Frame {
   hover: { sample: number; channel: number | null } | null
   measurement: Measurement | null
   hoverChannel: number | null
+  highlight: Highlight | null
 }
 
 export function annKey(id: number, row: number) {
@@ -109,7 +118,10 @@ export function drawFrame(ctx: CanvasRenderingContext2D, w: number, h: number, d
   for (const r of f.rows) {
     if (r.y + r.h < f.scrollY || r.y > f.scrollY + h) continue
     if (r.kind === 'channel') drawChannel(ctx, w, dpr, r.ch.index, r.ch.color, r.y, r.h, f)
-    else drawAnnotations(ctx, w, r.y, r.h, f.annotations.get(annKey(r.dec.id, r.row)) ?? [], r.dec.color, x)
+    else {
+      const hl = f.highlight?.decoder === r.dec.id && f.highlight.row === r.row ? f.highlight : null
+      drawAnnotations(ctx, w, r.y, r.h, f.annotations.get(annKey(r.dec.id, r.row)) ?? [], r.dec.color, x, hl)
+    }
   }
   ctx.restore()
 
@@ -279,7 +291,8 @@ function drawAnnotations(
   h: number,
   anns: Annotation[],
   color: string,
-  x: (s: number) => number
+  x: (s: number) => number,
+  highlight: Highlight | null
 ) {
   const top = y + 4
   const bh = h - 8
@@ -290,19 +303,25 @@ function drawAnnotations(
     const x0 = Math.max(x(a.start), -10)
     const x1 = Math.min(x(a.end), w + 10)
     const bw = Math.max(x1 - x0, 1)
+    const lit = highlight !== null && a.start === highlight.start && a.end === highlight.end
     if (a.class === ANN.DENSE) {
-      ctx.fillStyle = hexA(color, 0.28)
+      ctx.fillStyle = hexA(color, lit ? 0.5 : 0.28)
       ctx.fillRect(x0, top + 3, bw, bh - 6)
+      if (lit) {
+        ctx.strokeStyle = color
+        ctx.lineWidth = 1.5
+        ctx.strokeRect(x0 + 0.75, top + 3.75, Math.max(bw - 1.5, 0), bh - 7.5)
+      }
       continue
     }
     const c = CLASS_COLORS[a.class] ?? color
-    ctx.fillStyle = hexA(c, 0.22)
-    ctx.strokeStyle = hexA(c, 0.85)
-    ctx.lineWidth = 1
+    ctx.fillStyle = hexA(c, lit ? 0.42 : 0.22)
+    ctx.strokeStyle = lit ? c : hexA(c, 0.85)
+    ctx.lineWidth = lit ? 1.5 : 1
     ctx.beginPath()
     ctx.roundRect(x0 + 0.5, top + 0.5, bw - 1, bh - 1, Math.min(5, bw / 2))
     ctx.fill()
-    if (bw > 3) ctx.stroke()
+    if (bw > 3 || lit) ctx.stroke()
     if (bw > 14) {
       ctx.fillStyle = '#eef0f6'
       ctx.fillText(fitText(ctx, a.text, bw - 8), x0 + bw / 2, top + bh / 2 + 0.5)
