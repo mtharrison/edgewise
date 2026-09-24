@@ -1,6 +1,7 @@
 # Runs backlog-pickup Phase 1 when a collaborator labels an issue `ready`:
 # claim, propose, open a draft PR, stop. Phase 2 stays manual.
-# Setup: run /install-github-app in Claude Code (installs the app, sets the secret).
+# PROJECT_TOKEN is only used in its own job: steps in one job share a runner,
+# so a hijacked Claude step could otherwise plant a fake `gh` and capture it.
 
 name: Auto pickup
 
@@ -18,13 +19,12 @@ concurrency:
   group: pickup-${{ github.event.issue.number }}
 
 jobs:
-  pickup:
+  gate:
     if: github.event.label.name == 'ready' && github.event.issue.state == 'open'
     runs-on: ubuntu-latest
-    env:
-      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    timeout-minutes: 5
     steps:
-      # Cheap gate before spending tokens; the skill re-checks everything.
+      # Cheap check before spending tokens; the skill re-checks everything.
       - name: Labeler is a collaborator
         env:
           GH_TOKEN: ${{ github.token }}
@@ -32,6 +32,13 @@ jobs:
           REPO: ${{ github.repository }}
         run: gh api "repos/$REPO/collaborators/$SENDER" --silent
 
+  pickup:
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -53,3 +60,23 @@ jobs:
             Stop after opening the draft PR. Do not implement.
           claude_args: >-
             --allowedTools "Bash(gh:*),Bash(git:*),Bash(npx openspec:*),Read,Write,Edit,Glob,Grep,Skill"
+
+  trigger:
+    needs: [gate, pickup]
+    if: always() && needs.gate.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # PRs opened with the Claude app token trigger no workflows. Reopening with
+      # the owner's token starts CI and Board sync.
+      - name: Trigger PR workflows
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          N: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          for pr in $(gh pr list -R "$REPO" --state open --json number,headRefName \
+            --jq ".[] | select(.headRefName | startswith(\"$N-\")) | .number"); do
+            gh pr close "$pr" -R "$REPO" && gh pr reopen "$pr" -R "$REPO"
+          done
