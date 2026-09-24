@@ -20,7 +20,7 @@ export function TopBar() {
     <header className={`topbar ${bridge.platform === 'darwin' ? 'mac' : ''}`}>
       <div className="brand">
         <Logo />
-        <span>Logical</span>
+        <span>Edgewise</span>
       </div>
 
       <div className="controls">

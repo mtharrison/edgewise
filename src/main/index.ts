@@ -5,7 +5,7 @@ import { homedir } from 'os'
 import { join } from 'path'
 
 // Dev hook: expose the DevTools protocol for automated UI checks.
-if (process.env.LOGICAL_CDP_PORT) app.commandLine.appendSwitch('remote-debugging-port', process.env.LOGICAL_CDP_PORT)
+if (process.env.EDGEWISE_CDP_PORT) app.commandLine.appendSwitch('remote-debugging-port', process.env.EDGEWISE_CDP_PORT)
 
 const nativePath = app.isPackaged
   ? join(process.resourcesPath, 'native', 'logic.node')

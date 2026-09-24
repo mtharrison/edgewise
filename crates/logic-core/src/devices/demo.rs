@@ -116,7 +116,7 @@ impl Wave {
 
 fn pattern(rate: u64) -> Vec<u8> {
     let mut w = Wave { edges: Default::default() };
-    w.uart(0, 0.0010, 115_200.0, b"Hello from Logical!\r\n");
+    w.uart(0, 0.0010, 115_200.0, b"Hello from Edgewise!\r\n");
     w.uart(0, 0.0120, 115_200.0, b"temp=23.5C\r\n");
     w.i2c(1, 2, 0.0040, 400_000.0, &[&[0xA0, 0x10, 0xDE, 0xAD]], false);
     w.i2c(1, 2, 0.0065, 400_000.0, &[&[0xA0, 0x10], &[0xA1, 0xBE, 0xEF]], true);

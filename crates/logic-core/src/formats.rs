@@ -113,7 +113,7 @@ pub fn export_vcd(snap: &Snapshot, names: &[String], path: &Path) -> Result<(), 
     let mut w = std::io::BufWriter::new(file);
     let ch = snap.meta.channels;
     let id = |i: usize| (b'!' + i as u8) as char;
-    let mut hdr = String::from("$version Logical $end\n$timescale 1 ps $end\n$scope module logic $end\n");
+    let mut hdr = String::from("$version Edgewise $end\n$timescale 1 ps $end\n$scope module logic $end\n");
     for i in 0..ch {
         let name = names.get(i).cloned().unwrap_or_else(|| format!("D{i}")).replace(' ', "_");
         hdr += &format!("$var wire 1 {} {} $end\n", id(i), name);
@@ -158,7 +158,7 @@ mod tests {
         let cap = Capture::new(24_000_000, 8);
         let data: Vec<u8> = (0..3_000_000u32).map(|i| (i / 7) as u8).collect();
         cap.append(&data);
-        let dir = std::env::temp_dir().join("logical-test.sr");
+        let dir = std::env::temp_dir().join("edgewise-test.sr");
         let names: Vec<String> = (0..8).map(|i| format!("ch{i}")).collect();
         save_sr(&cap.snapshot(), &names, &dir).unwrap();
         let (back, n2) = load_sr(&dir).unwrap();

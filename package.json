@@ -1,6 +1,6 @@
 {
-  "name": "logical",
-  "productName": "Logical",
+  "name": "edgewise",
+  "productName": "Edgewise",
   "version": "0.1.0",
   "description": "A modern logic analyzer with a Rust core",
   "main": "out/main/index.js",

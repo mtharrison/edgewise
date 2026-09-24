@@ -11,11 +11,11 @@ interface Bridge {
 
 declare global {
   interface Window {
-    logical: Bridge
+    edgewise: Bridge
   }
 }
 
-export const bridge = window.logical
+export const bridge = window.edgewise
 const call = bridge.call
 
 /** Typed wrapper over the Rust engine living in the main process. */

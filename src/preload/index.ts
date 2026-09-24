@@ -14,4 +14,4 @@ const bridge = {
 }
 
 export type Bridge = typeof bridge
-contextBridge.exposeInMainWorld('logical', bridge)
+contextBridge.exposeInMainWorld('edgewise', bridge)
