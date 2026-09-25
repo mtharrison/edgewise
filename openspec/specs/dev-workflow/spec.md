@@ -77,11 +77,26 @@ An agent SHALL pick up an item only if it is on the board, in Ready, unassigned,
 - **THEN** the agent ignores the comment
 
 ### Requirement: CI checks
-Every PR SHALL run `openspec validate --all --strict` and the project's tests, and `main` SHALL accept changes only through PRs with passing checks.
+Every PR SHALL run `openspec validate --all --strict` and the project's tests, and SHALL launch the built app to confirm it starts. `main` SHALL accept changes only through PRs with passing checks.
 
 #### Scenario: Invalid spec
 - **WHEN** a PR contains a delta spec with a requirement that has no scenario
 - **THEN** the CI check fails and the PR cannot merge
+
+#### Scenario: App fails to start
+- **WHEN** a PR's build produces an app whose window never renders
+- **THEN** the CI check fails and the PR cannot merge
+
+### Requirement: Checks in the running app
+An agent SHALL check behavior that is visible in the app by driving the built app (`scripts/ui.mjs`) before it pushes, and SHALL be able to run the app, the tests and the typecheck in every workflow that lets it change code. What it could not check, such as behavior that needs a real board, SHALL be listed under "Not verified" in the PR description before the PR leaves draft. The maintainer checks those items in review.
+
+#### Scenario: Check needs hardware
+- **WHEN** a task can only be checked with an FX2 board plugged in
+- **THEN** the agent lists it under "Not verified" in the PR and still marks the PR ready for review
+
+#### Scenario: Requested fix on a PR
+- **WHEN** a maintainer asks an agent for a change in a PR comment
+- **THEN** the agent runs the typecheck, the tests and any app check before pushing, and says in its reply what it ran
 
 ### Requirement: Tooling changes skip the flow
 Changes that only affect development tooling (`.github/`, `.claude/`, `openspec/config.yaml`, scripts) and not the app's behavior MAY go straight to a PR without an issue, a Ready gate or an OpenSpec change. If such a change alters the workflow this spec describes, the same PR SHALL update this spec directly. Tooling PRs SHALL still pass CI and be merged by a maintainer.

@@ -4,7 +4,9 @@ context: |
   Edgewise is a desktop logic analyzer: Electron + React UI (src/renderer), an Electron
   main process that owns the engine (src/main), and a Rust core (crates/logic-core)
   exposed through an N-API binding (crates/logic-node). Tests: `npm test` runs the Rust
-  unit tests; `npm run typecheck` checks the TypeScript. There are no UI tests yet.
+  unit tests; `npm run typecheck` checks the TypeScript. `node scripts/ui.mjs <check.mjs>`
+  drives the built app with Playwright for UI checks (the script header gives the API);
+  there are no committed UI tests yet.
   Hardware: FX2 boards running sigrok's fx2lafw firmware, plus a built-in demo device.
 
   Workflow (see openspec/specs/dev-workflow/spec.md): the backlog is the GitHub Projects
@@ -26,6 +28,7 @@ rules:
     - Record any bug or gap found but not fixed as a follow-up issue candidate
   tasks:
     - Include tasks that add or update tests for every new or changed scenario that can be tested
+    - Check behavior visible in the app with a `scripts/ui.mjs` check, not by hand; only what needs a real board is checked by the maintainer
     - End with verifying against the specs and archiving the change
 
 operations:
