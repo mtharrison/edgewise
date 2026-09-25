@@ -16,7 +16,7 @@ runs:
     - run: npm ci
       shell: bash
       env:
-        ELECTRON_SKIP_BINARY_DOWNLOAD: ${{ inputs.electron == 'true' && '' || '1' }}
+        ELECTRON_SKIP_BINARY_DOWNLOAD: ${{ inputs.electron != 'true' && '1' || '' }}
     - if: inputs.electron == 'true'
       run: sudo apt-get update -qq && sudo apt-get install -y -qq xvfb
       shell: bash
