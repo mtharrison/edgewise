@@ -76,9 +76,10 @@ Start only when asked to continue an item, or when re-run and a draft PR you ope
 
 1. **Check:** the last `labeled` event for `spec-approved` on the PR (`gh api repos/mtharrison/edgewise/issues/<PR>/events`) was by a collaborator. Read any review comments from collaborators and update the artifacts first if they ask for changes.
 2. **Apply:** run `openspec-apply-change` on `<N>-<slug>`. Commit after each task group. `npm test` and `npm run typecheck` must pass.
+   Tasks that check behaviour in the app: write a check and run it with `node scripts/ui.mjs <check.mjs>` (the script header gives the API), then Read the screenshots it saves. Only a task that needs a real board goes unchecked.
 3. **Verify:** run `openspec-verify-change`. Fix what it finds.
 4. **Archive:** run `openspec-archive-change`. Commit and push.
-5. **Hand over:** `gh pr ready <PR>`. Board-sync moves the item to In review. Report the PR link and **stop**. The maintainer reviews and merges.
+5. **Hand over:** list any task you could not check under a **Not verified** heading in the PR body, then `gh pr ready <PR>`. Board-sync moves the item to In review. Report the PR link and **stop**. The maintainer reviews, checks what you could not, and merges.
 
 ## If something goes wrong
 

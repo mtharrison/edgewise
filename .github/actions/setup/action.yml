@@ -1,0 +1,22 @@
+name: Setup
+description: Node, Rust and npm dependencies. With `electron`, also the Electron binary and xvfb so the app can run.
+inputs:
+  electron:
+    description: Install the Electron binary and xvfb
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v7
+      with:
+        node-version: 24
+        cache: npm
+    - uses: dtolnay/rust-toolchain@stable
+    - uses: Swatinem/rust-cache@v2
+    - run: npm ci
+      shell: bash
+      env:
+        ELECTRON_SKIP_BINARY_DOWNLOAD: ${{ inputs.electron != 'true' && '1' || '' }}
+    - if: inputs.electron == 'true'
+      run: sudo apt-get update -qq && sudo apt-get install -y -qq xvfb
+      shell: bash

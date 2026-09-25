@@ -7,3 +7,4 @@ native/*.node
 # Shared Claude Code skills and commands (overrides a global ignore); keep personal settings out
 !.claude/
 .claude/settings.local.json
+ui-checks/
