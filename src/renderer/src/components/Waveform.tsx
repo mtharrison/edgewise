@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
-import { ArrowDownRight, ArrowUpRight, ChevronsDown, ChevronsUp, EyeOff, Zap } from 'lucide-react'
+import { ArrowDownRight, ArrowUpDown, ArrowUpRight, ChevronsDown, ChevronsUp, EyeOff, Zap } from 'lucide-react'
 import { bridge, engine } from '../api'
 import { cycleTrigger, frameSpan, panBy, updateChannel, zoomAt } from '../actions'
 import { annKey, drawFrame, type Burst, type Frame, type Highlight } from '../draw'
@@ -12,7 +12,7 @@ import { annotationAt } from '../view'
 const TRIGGER_ICON: Record<TriggerCondition, ReactElement> = {
   rising: <ArrowUpRight size={13} />,
   falling: <ArrowDownRight size={13} />,
-  edge: <Zap size={13} />,
+  edge: <ArrowUpDown size={13} />,
   high: <ChevronsUp size={13} />,
   low: <ChevronsDown size={13} />
 }

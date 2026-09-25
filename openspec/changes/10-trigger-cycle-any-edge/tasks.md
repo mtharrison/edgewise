@@ -9,7 +9,8 @@
 ## 2. Name the condition on the trigger button
 
 - [x] 2.1 In `Waveform.tsx`, when a channel has a condition, show its name ("Rising", "Falling", "Any edge", "High", "Low") next to the icon on the trigger button, and use the same name in the tooltip. In `styles.css`, let the active button widen to fit the text. Verify `npm run typecheck` passes
-- [ ] 2.2 Manually verify in the running app: with a condition set, the button shows its name and the tooltip matches; with none set, the button is the bare ⚡ shown only on hover. There are no UI tests to add this to (see `openspec/config.yaml`)
+- [x] 2.2 In `Waveform.tsx`, change the `edge` icon in `TRIGGER_ICON` from `Zap` to `ArrowUpDown`, so ⚡ only means "no trigger set / set trigger". Verify `npm run typecheck` passes
+- [ ] 2.3 Manually verify in the running app: with a condition set, the button shows its name and the tooltip matches, and "Any edge" shows ↕ rather than ⚡; with none set, the button is the bare ⚡ shown only on hover. There are no UI tests to add this to (see `openspec/config.yaml`)
 
 ## 3. Verify and archive
 

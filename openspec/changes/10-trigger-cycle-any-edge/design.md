@@ -18,6 +18,7 @@ See proposal.md (Why). The channel trigger button in the waveform's channel labe
 - **Insert `'edge'` between `'falling'` and `'high'` in `TRIGGER_CYCLE`.** This is the order the issue asks for and groups the three edge conditions before the two level conditions. The alternative, appending `'edge'` after `'low'`, would leave it last and separate from the other edge conditions.
 - **Test via `cycleTrigger` against the store**, as `actions.test.ts` already does for device actions, rather than exporting `TRIGGER_CYCLE`. This tests the behavior the user sees, not the constant.
 - **Show the condition's name next to its icon on the channel trigger button, only when a condition is set.** The button widens to fit the text. With no condition it stays a bare ⚡ that only appears on hover, as today, so channels without triggers don't get cluttered. The alternative, a tooltip only, still hides the meaning until you hover.
+- **Give "Any edge" the `ArrowUpDown` icon instead of `Zap`.** ⚡ also means "trigger" in general: it is the unset button and the top-bar trigger chip. Using it for "Any edge" as well made it unclear whether a channel had a trigger set. `ArrowUpDown` matches the popover's "↕ Any edge" and fits with the other edge icons (↗ and ↘). ⚡ now only means "trigger".
 - **Use the popover's words without its arrow glyphs** ("Rising", "Falling", "Any edge", "High", "Low"). The button already has an icon, so the glyph would repeat it. The tooltip uses the same names, so it no longer shows the raw value ("Trigger: edge").
 
 ## Risks / Trade-offs

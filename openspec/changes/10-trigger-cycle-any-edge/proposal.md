@@ -8,11 +8,12 @@ Delivers #10. Clicking a channel's trigger button cycles none → rising → fal
 
 - Clicking a channel's trigger button SHALL cycle through none, rising, falling, any edge, high and low, then back to none.
 - When a channel has a condition, its trigger button SHALL show the condition's name ("Rising", "Falling", "Any edge", "High", "Low") next to the icon, and its tooltip SHALL use the same name. This was requested by a maintainer on this PR, because the icon alone doesn't say what it means.
+- The "Any edge" icon on the channel trigger button SHALL change from ⚡ to an up-down arrow (↕). ⚡ also marks a channel with no trigger and the top-bar trigger chip, so using it for "Any edge" too was confusing. A maintainer requested this on this PR.
 
 ### Non-goals
 
 - Changing the trigger popover, the pre-trigger slider, the "Clear trigger" action or the trigger chip.
-- Changing the icons on the channel trigger button, or how the button looks when no condition is set.
+- Changing the other condition icons on the channel trigger button, or how the button looks when no condition is set.
 - Any change to how triggers are evaluated during capture (`crates/logic-core`).
 
 ## Capabilities
@@ -29,4 +30,4 @@ Delivers #10. Clicking a channel's trigger button cycles none → rising → fal
 
 - `src/renderer/src/actions.ts`: the trigger cycle order used by `cycleTrigger`.
 - `src/renderer/src/actions.test.ts`: new unit test for the cycle.
-- `src/renderer/src/components/Waveform.tsx` and `styles.css`: the channel trigger button's label and tooltip.
+- `src/renderer/src/components/Waveform.tsx` and `styles.css`: the channel trigger button's label, tooltip and "Any edge" icon.
