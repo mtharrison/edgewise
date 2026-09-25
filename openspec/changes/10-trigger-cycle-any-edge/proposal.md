@@ -9,6 +9,7 @@ Delivers #10. Clicking a channel's trigger button cycles none → rising → fal
 - Clicking a channel's trigger button SHALL cycle through none, rising, falling, any edge, high and low, then back to none.
 - When a channel has a condition, its trigger button SHALL show the condition's name ("Rising", "Falling", "Any edge", "High", "Low") next to the icon, and its tooltip SHALL use the same name. This was requested by a maintainer on this PR, because the icon alone doesn't say what it means.
 - The "Any edge" icon on the channel trigger button SHALL change from ⚡ to an up-down arrow (↕). ⚡ also marks a channel with no trigger and the top-bar trigger chip, so using it for "Any edge" too was confusing. A maintainer requested this on this PR.
+- Hovering the channel trigger button SHALL show a tooltip explaining what the current condition means. With no condition set, the tooltip SHALL list all five conditions and what each means. A maintainer requested this on this PR, because the names alone don't say how each condition behaves.
 
 ### Non-goals
 

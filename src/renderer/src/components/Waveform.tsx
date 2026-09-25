@@ -25,6 +25,20 @@ const TRIGGER_NAME: Record<TriggerCondition, string> = {
   low: 'Low'
 }
 
+const TRIGGER_HINT: Record<TriggerCondition, string> = {
+  rising: 'fires when this channel goes from low to high',
+  falling: 'fires when this channel goes from high to low',
+  edge: 'fires when this channel changes in either direction',
+  high: 'only fires while this channel is high',
+  low: 'only fires while this channel is low'
+}
+
+const NO_TRIGGER_HINT = [
+  'No trigger on this channel. Click to cycle through:',
+  ...(Object.keys(TRIGGER_NAME) as TriggerCondition[]).map((c) => `${TRIGGER_NAME[c]}: ${TRIGGER_HINT[c]}`),
+  'If no channel has a trigger, the capture starts straight away.'
+].join('\n')
+
 // Cmd on macOS; Ctrl elsewhere (on macOS, Ctrl+click is a right-click).
 const MOD_KEY = bridge.platform === 'darwin' ? 'Meta' : 'Control'
 const isMod = (e: { metaKey: boolean; ctrlKey: boolean }) => (MOD_KEY === 'Meta' ? e.metaKey : e.ctrlKey)
@@ -449,7 +463,11 @@ function ChannelLabel({ ch, top }: { ch: Channel; top: number }) {
       <span className="ch-actions">
         <button
           className={`icon-btn trig ${ch.trigger ? 'on' : ''}`}
-          title={ch.trigger ? `Trigger: ${TRIGGER_NAME[ch.trigger]} (click to change)` : 'Set trigger'}
+          title={
+            ch.trigger
+              ? `Trigger: ${TRIGGER_NAME[ch.trigger]}, ${TRIGGER_HINT[ch.trigger]}.\nAll conditions set on channels must hold at once.\nClick to change.`
+              : NO_TRIGGER_HINT
+          }
           onClick={() => cycleTrigger(ch.index)}
         >
           {ch.trigger ? (

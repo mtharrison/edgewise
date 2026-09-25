@@ -20,6 +20,7 @@ See proposal.md (Why). The channel trigger button in the waveform's channel labe
 - **Show the condition's name next to its icon on the channel trigger button, only when a condition is set.** The button widens to fit the text. With no condition it stays a bare ⚡ that only appears on hover, as today, so channels without triggers don't get cluttered. The alternative, a tooltip only, still hides the meaning until you hover.
 - **Give "Any edge" the `ArrowUpDown` icon instead of `Zap`.** ⚡ also means "trigger" in general: it is the unset button and the top-bar trigger chip. Using it for "Any edge" as well made it unclear whether a channel had a trigger set. `ArrowUpDown` matches the popover's "↕ Any edge" and fits with the other edge icons (↗ and ↘). ⚡ now only means "trigger".
 - **Use the popover's words without its arrow glyphs** ("Rising", "Falling", "Any edge", "High", "Low"). The button already has an icon, so the glyph would repeat it. The tooltip uses the same names, so it no longer shows the raw value ("Trigger: edge").
+- **Explain each condition in the button's native `title` tooltip**, from a `TRIGGER_HINT` table next to `TRIGGER_NAME`. With a condition set, the tooltip names it, says what it means and notes that all channel conditions must hold at once. With none set, it lists every condition with its meaning (in cycle order) and says the capture starts straight away if no channel has a trigger. The alternative, a custom tooltip component, adds code for no real gain; the app already uses `title` for its tooltips.
 
 ## Risks / Trade-offs
 
