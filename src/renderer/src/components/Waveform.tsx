@@ -37,7 +37,12 @@ const NO_TRIGGER_HINT = [
   'No trigger on this channel. Click to cycle through:',
   ...(Object.keys(TRIGGER_NAME) as TriggerCondition[]).map((c) => `${TRIGGER_NAME[c]}: ${TRIGGER_HINT[c]}`),
   'If no channel has a trigger, the capture starts straight away.'
-].join('\n')
+]
+
+const triggerHint = (c: TriggerCondition | null) =>
+  c
+    ? [`Trigger: ${TRIGGER_NAME[c]}, ${TRIGGER_HINT[c]}.`, 'All conditions set on channels must hold at once.', 'Click to change.']
+    : NO_TRIGGER_HINT
 
 // Cmd on macOS; Ctrl elsewhere (on macOS, Ctrl+click is a right-click).
 const MOD_KEY = bridge.platform === 'darwin' ? 'Meta' : 'Control'
@@ -440,6 +445,9 @@ export function Waveform() {
 
 function ChannelLabel({ ch, top }: { ch: Channel; top: number }) {
   const [editing, setEditing] = useState(false)
+  // Drawn by us rather than a native `title`, which Electron doesn't reliably show.
+  const [tip, setTip] = useState<{ left: number; top?: number; bottom?: number } | null>(null)
+  const hint = triggerHint(ch.trigger)
   return (
     <div className="ch-label" style={{ top, height: CH_H }}>
       <span className="ch-bar" style={{ background: ch.color }} />
@@ -463,11 +471,14 @@ function ChannelLabel({ ch, top }: { ch: Channel; top: number }) {
       <span className="ch-actions">
         <button
           className={`icon-btn trig ${ch.trigger ? 'on' : ''}`}
-          title={
-            ch.trigger
-              ? `Trigger: ${TRIGGER_NAME[ch.trigger]}, ${TRIGGER_HINT[ch.trigger]}.\nAll conditions set on channels must hold at once.\nClick to change.`
-              : NO_TRIGGER_HINT
-          }
+          aria-label={hint.join(' ')}
+          onMouseEnter={(e) => {
+            // Anchor to the label's right edge so the tip stays put as the button resizes.
+            const r = e.currentTarget.closest('.ch-label')!.getBoundingClientRect()
+            const below = r.top < window.innerHeight / 2
+            setTip({ left: r.right + 8, ...(below ? { top: r.top } : { bottom: window.innerHeight - r.bottom }) })
+          }}
+          onMouseLeave={() => setTip(null)}
           onClick={() => cycleTrigger(ch.index)}
         >
           {ch.trigger ? (
@@ -483,6 +494,13 @@ function ChannelLabel({ ch, top }: { ch: Channel; top: number }) {
           <EyeOff size={13} />
         </button>
       </span>
+      {tip && (
+        <div className="trig-tip" role="tooltip" style={tip}>
+          {hint.map((line) => (
+            <div key={line}>{line}</div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
