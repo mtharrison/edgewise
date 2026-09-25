@@ -39,20 +39,14 @@ jobs:
     needs: gate
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    env:
-      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup
         with:
-          node-version: 24
-          cache: npm
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - run: npm ci
+          electron: 'true'
 
       - uses: anthropics/claude-code-action@v1
         with:
@@ -62,9 +56,11 @@ jobs:
             The change is on the checked-out branch ${{ github.event.pull_request.head.ref }}.
             You are running in CI, so:
             - Push after each commit.
-            - If a check fails or you get stuck, comment on the PR saying why, leave it in draft, then stop.
+            - Check UI behaviour in the running app with `node scripts/ui.mjs <check.mjs>` (read the script header). It works here.
+            - If tests, typecheck or CI fail and you cannot fix them, comment on the PR saying why, leave it in draft, then stop.
+            - A task you cannot check (needs hardware) is not a failure: list it under "Not verified" in the PR body and carry on.
             Stop after `gh pr ready`. Never merge.
           claude_args: >-
             --model claude-opus-5-5
-            --allowedTools "Bash(gh:*),Bash(git:*),Bash(npm:*),Bash(npx:*),Bash(cargo:*),Read,Write,Edit,Glob,Grep,Skill"
+            --allowedTools "Bash(gh:*),Bash(git:*),Bash(npm:*),Bash(npx:*),Bash(node:*),Bash(cargo:*),Read,Write,Edit,Glob,Grep,Skill"
 
