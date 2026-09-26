@@ -3,7 +3,7 @@ import { DECODER_COLORS, get, makeChannels, set } from './store'
 import type { DecoderConfig, DecoderInst, Status, TriggerCondition } from './types'
 import { clampViewTo, frameRange } from './view'
 
-const TRIGGER_CYCLE: (TriggerCondition | null)[] = [null, 'rising', 'falling', 'high', 'low']
+const TRIGGER_CYCLE: (TriggerCondition | null)[] = [null, 'rising', 'falling', 'edge', 'high', 'low']
 
 export function toast(msg: string) {
   set({ toast: msg })
