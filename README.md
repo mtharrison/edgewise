@@ -26,7 +26,7 @@ npm test         # Rust unit tests
 
 To try a pull request without disturbing your checkout, `scripts/pr-run.sh 41` checks it out in a sibling worktree and launches it.
 
-`node scripts/ui.mjs [check.mjs]` builds and launches the app under Playwright, runs each check script against it, and saves screenshots to `ui-checks/`. CI and the agent workflows use it to see the app running; the script header gives the API.
+`node scripts/ui.mjs [check.mjs]` builds and launches the app under Playwright, runs each check script against it, and saves screenshots and GIFs to `ui-checks/`. CI and the agent workflows use it to see the app running; the script header gives the API. `scripts/pr-media.sh <PR> <files>` publishes those files to the `pr-media` branch and prints Markdown to embed them in the PR.
 
 Needs Rust (rustup) and Node 20+.
 

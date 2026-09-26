@@ -6,7 +6,8 @@ context: |
   exposed through an N-API binding (crates/logic-node). Tests: `npm test` runs the Rust
   unit tests; `npm run typecheck` checks the TypeScript. `node scripts/ui.mjs <check.mjs>`
   drives the built app with Playwright for UI checks (the script header gives the API);
-  there are no committed UI tests yet.
+  checks live in scripts/checks/. `scripts/pr-media.sh <PR> <files>` publishes their
+  screenshots and GIFs so the PR description can embed them.
   Hardware: FX2 boards running sigrok's fx2lafw firmware, plus a built-in demo device.
 
   Workflow (see openspec/specs/dev-workflow/spec.md): the backlog is the GitHub Projects
