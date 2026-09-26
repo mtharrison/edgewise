@@ -50,7 +50,7 @@ To stop (stop flag, sink returns false, or error), write one byte to stdin and c
 - [The agent building this may not have `sigrok-cli` locally] → The setup-action change makes it available on the next CI run. If the check cannot run locally, it is confirmed in the PR's CI run, or listed under Not verified.
 - [A scan with many allow-listed drivers spawns many processes] → The drivers run in parallel and each is capped at 10 s, so the scan finishes in 10 s at most. It only runs at launch and on rescan.
 - [Launch waits for the sigrok scan before the device list appears] → Only when `sigrok-cli` exists. It is bounded at 10 s and usually under 1 s for USB drivers.
-- [Orphaned `sigrok-cli` if the app crashes mid-capture] → stdin closes when the parent dies. During implementation, check whether `sigrok-cli` stops on EOF as it does on a byte, and note the result here.
+- [Orphaned `sigrok-cli` if the app crashes mid-capture] → stdin closes when the parent dies. During implementation, check whether `sigrok-cli` stops on EOF as it does on a byte, and note the result here. Not checked: no `sigrok-cli` was available in the build job, so this is left for the maintainer.
 
 ## Follow-up issue candidates
 
