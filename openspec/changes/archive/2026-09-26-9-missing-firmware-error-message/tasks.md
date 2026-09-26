@@ -9,5 +9,5 @@
 ## 2. Verify and archive
 
 - [x] 2.1 Run `npm test` and `npm run typecheck` and confirm both pass
-- [ ] 2.2 Run the `openspec-verify-change` skill against `9-missing-firmware-error-message` and resolve anything it flags
-- [ ] 2.3 Run the `openspec-archive-change` skill to archive the change and update `openspec/specs/devices/spec.md`
+- [x] 2.2 Run the `openspec-verify-change` skill against `9-missing-firmware-error-message` and resolve anything it flags
+- [x] 2.3 Run the `openspec-archive-change` skill to archive the change and update `openspec/specs/devices/spec.md`
