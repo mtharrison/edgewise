@@ -1,4 +1,6 @@
-# Runs backlog-pickup Phase 1 when a collaborator labels an issue `ready`:
+# Runs backlog-pickup Phase 1 when an issue gets the `ready` label, applied by
+# a collaborator on GitHub or by a workspace member in Linear (the label arrives
+# through Linear's GitHub Issues Sync as linear[bot]):
 # claim, propose, open a draft PR, stop. Auto build runs Phase 2.
 
 name: Auto pickup
@@ -23,12 +25,12 @@ jobs:
     timeout-minutes: 5
     steps:
       # Cheap check before spending tokens; the skill re-checks everything.
-      - name: Labeler is a collaborator
+      - name: Labeler is a collaborator or Linear
         env:
           GH_TOKEN: ${{ github.token }}
           SENDER: ${{ github.event.sender.login }}
           REPO: ${{ github.repository }}
-        run: gh api "repos/$REPO/collaborators/$SENDER" --silent
+        run: '[ "$SENDER" = "linear[bot]" ] || gh api "repos/$REPO/collaborators/$SENDER" --silent'
 
   pickup:
     needs: gate
@@ -41,16 +43,17 @@ jobs:
       - uses: ./.github/actions/setup
 
       - uses: anthropics/claude-code-action@v1
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
             Run the backlog-pickup skill, Phase 1 only, on issue #${{ github.event.issue.number }} in ${{ github.repository }}.
             You are running in CI, so:
-            - Assign the issue to ${{ github.event.sender.login }}, not @me.
-            - Skip the board checks and the board Status edit; your token cannot reach the user project, and Board sync handles Status.
+            - Assign the issue to ${{ github.repository_owner }}, not @me.
             - If any check fails, comment on the issue saying which one, then stop.
             Stop after opening the draft PR. Do not implement.
           claude_args: >-
             --model claude-opus-5-5
-            --allowedTools "Bash(gh:*),Bash(git:*),Bash(npx openspec:*),Read,Write,Edit,Glob,Grep,Skill"
+            --allowedTools "Bash(gh:*),Bash(git:*),Bash(npx openspec:*),Bash(scripts/linear-status.sh:*),Read,Write,Edit,Glob,Grep,Skill"
 

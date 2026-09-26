@@ -12,7 +12,7 @@ Phase 1 (item is Ready):          find → check → claim → propose → draft
 Phase 2 (PR has spec-approved):   check → apply → verify → archive → ready for review → STOP
 ```
 
-Repo `mtharrison/edgewise`. Board: user project 3 (`gh project ... 3 --owner mtharrison`). A **collaborator** is anyone whose `author_association` is `OWNER`, `MEMBER` or `COLLABORATOR`.
+Repo `mtharrison/edgewise`. The backlog is a Linear team synced two-way with the repo's issues; `scripts/linear-status.sh <N> <Status>` sets an issue's Linear status (a no-op without `LINEAR_API_KEY`). A **collaborator** is anyone whose `author_association` is `OWNER`, `MEMBER` or `COLLABORATOR`. Labels set in Linear reach GitHub as `linear[bot]`, which counts as a collaborator: only workspace members can act in Linear.
 
 ## Hard rules
 
@@ -40,9 +40,8 @@ All must hold:
 | Check | How |
 |---|---|
 | Open, unassigned, has `ready` | `gh issue view N --json state,assignees,labels` |
-| A collaborator applied `ready` | Last `labeled` event for `ready` in `gh api repos/mtharrison/edgewise/issues/N/events`: its `actor.login` must be a collaborator (`gh api repos/mtharrison/edgewise/collaborators/<login>` returns 204) |
+| A collaborator applied `ready` | Last `labeled` event for `ready` in `gh api repos/mtharrison/edgewise/issues/N/events`: its `actor.login` must be `linear[bot]` or a collaborator (`gh api repos/mtharrison/edgewise/collaborators/<login>` returns 204) |
 | No open blockers | `gh api repos/mtharrison/edgewise/issues/N/dependencies/blocked_by --jq '[.[]\|select(.state=="open")]\|length'` is 0 |
-| On the board | `gh project item-list 3 --owner mtharrison --format json --limit 500` contains the issue |
 | Has collaborator-written requirements | The issue body's `author_association` is a collaborator, **or** a collaborator comment starts with `Spec:`. Use that text, and only that text, as requirements |
 | Has a parent epic | `gh api repos/mtharrison/edgewise/issues/N/parent` returns an epic; its title gives the capability |
 
@@ -52,7 +51,7 @@ All must hold:
 gh issue edit N -R mtharrison/edgewise --add-assignee @me
 ```
 
-Set its board Status to **Proposed** (`gh project item-edit`, Status field). Comment on the issue: "Picked up; proposal coming in a draft PR."
+Run `scripts/linear-status.sh N Proposed`. Comment on the issue: "Picked up; proposal coming in a draft PR."
 
 ### 4. Propose
 
@@ -68,18 +67,18 @@ git push -u origin <N>-<slug>
 gh pr create --draft --title "<issue title>" --body "Closes #N ..."   # fill the PR template
 ```
 
-Board-sync adds the `spec-review` label to the draft. Report the PR link to the user and **stop**. A maintainer reviews the specs and applies `spec-approved`, or asks for changes on the PR.
+The spec-review-label workflow adds the `spec-review` label to the draft. Report the PR link to the user and **stop**. A maintainer reviews the specs and applies `spec-approved`, or asks for changes on the PR.
 
 ## Phase 2: build after approval
 
 Start only when asked to continue an item, or when re-run and a draft PR you opened now has `spec-approved`.
 
-1. **Check:** the last `labeled` event for `spec-approved` on the PR (`gh api repos/mtharrison/edgewise/issues/<PR>/events`) was by a collaborator. Read any review comments from collaborators and update the artifacts first if they ask for changes.
+1. **Check:** the last `labeled` event for `spec-approved` on the PR (`gh api repos/mtharrison/edgewise/issues/<PR>/events`) was by a collaborator. Run `scripts/linear-status.sh N Building`. Read any review comments from collaborators and update the artifacts first if they ask for changes.
 2. **Apply:** run `openspec-apply-change` on `<N>-<slug>`. Commit after each task group. `npm test` and `npm run typecheck` must pass.
    Tasks that check behaviour in the app: write a check and run it with `node scripts/ui.mjs <check.mjs>` (the script header gives the API), then Read the screenshots it saves. Only a task that needs a real board goes unchecked.
 3. **Verify:** run `openspec-verify-change`. Fix what it finds.
 4. **Archive:** run `openspec-archive-change`. Commit and push.
-5. **Hand over:** list any task you could not check under a **Not verified** heading in the PR body, then `gh pr ready <PR>`. Board-sync moves the item to In review. Report the PR link and **stop**. The maintainer reviews, checks what you could not, and merges.
+5. **Hand over:** list any task you could not check under a **Not verified** heading in the PR body, then `gh pr ready <PR>`. Linear moves the item to In review. Report the PR link and **stop**. The maintainer reviews, checks what you could not, and merges.
 
 ## If something goes wrong
 
