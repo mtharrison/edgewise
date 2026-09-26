@@ -1,5 +1,6 @@
 import { bridge, engine } from './api'
-import { DECODER_COLORS, get, makeChannels, set } from './store'
+import { fitToDevice, overlayChannels, type Saved, type SavedDecoder } from './settings'
+import { DECODER_COLORS, get, makeChannels, set, useStore } from './store'
 import type { DecoderConfig, DecoderInst, Status, TriggerCondition } from './types'
 import { clampViewTo, frameRange } from './view'
 
@@ -25,8 +26,27 @@ export function sameFx2Model(idA: string, idB: string): boolean {
   return a !== null && a === vidPid(idB)
 }
 
+let pendingRestore: Saved | null = null
+
+/**
+ * Applies the device-independent saved settings now and keeps the rest for the next
+ * `refreshDevices()`, which fits them to the listed devices.
+ */
+export function restoreSettings(saved: Saved | null) {
+  pendingRestore = saved
+  if (saved) set({ duration: saved.duration, pretrigger: saved.pretrigger })
+}
+
 export async function refreshDevices() {
   const list = await engine.listDevices()
+  const fitted = pendingRestore && fitToDevice(pendingRestore, list)
+  pendingRestore = null
+  if (fitted) {
+    const { deviceId, samplerate, channels } = fitted
+    set({ devices: list, deviceConnected: true, deviceId, samplerate, channels })
+    await restoreDecoders(fitted.decoders)
+    return
+  }
   const { deviceId, devices: prevDevices } = get()
   if (deviceId === null) {
     set({ devices: list, deviceConnected: true })
@@ -57,6 +77,17 @@ export function selectDevice(id: string) {
   const nextDevices = !deviceConnected && prevId && prevId !== id ? devices.filter((d) => d.id !== prevId) : devices
   set({ deviceId: id, samplerate: rate, deviceConnected: true, devices: nextDevices })
   if (get().channels.length !== dev.channels) set({ channels: makeChannels(dev.channels) })
+}
+
+/** Puts every remembered capture setting back to its default; the capture is untouched. */
+export function resetSettings() {
+  const { status, decoders, devices } = get()
+  if (isBusy(status)) return
+  for (const d of decoders) engine.removeDecoder(d.id)
+  const { duration, pretrigger, samplerate, table } = useStore.getInitialState()
+  set({ decoders: [], table, duration, pretrigger, samplerate })
+  if (devices.length) selectDevice(devices[0].id)
+  set({ channels: makeChannels(get().channels.length) })
 }
 
 export function isBusy(s: Status) {
@@ -104,7 +135,9 @@ export async function pollStatus() {
   const prev = get().status
   const changed = (Object.keys(s) as (keyof Status)[]).some((k) => s[k] !== prev[k])
   if (changed) set({ status: s })
-  if (s.channels !== get().channels.length) set({ channels: makeChannels(s.channels) })
+  // Follow the channel count of an actual capture, keeping the current channel settings
+  // by index. Before anything is captured the channel list belongs to the device.
+  if (s.samples > 0 && s.channels !== get().channels.length) set({ channels: overlayChannels(s.channels, get().channels) })
 
   const newCapture = s.captureId !== lastCaptureId
   const finished = lastState !== s.state && (s.state === 'done' || s.state === 'error')
@@ -197,6 +230,29 @@ export async function addDecoder(kind: string) {
   } catch (e) {
     toast(String((e as Error).message ?? e))
   }
+}
+
+/** Re-creates saved decoders; any the engine rejects is dropped without a toast. */
+async function restoreDecoders(saved: SavedDecoder[]) {
+  const made = await Promise.all(
+    saved.map(async ({ config, visible }) => {
+      let id: number | undefined
+      try {
+        id = await engine.addDecoder(config)
+        const rows = await engine.decoderRows(config)
+        return { id, config, rows, visible }
+      } catch {
+        if (id !== undefined) engine.removeDecoder(id)
+        return null
+      }
+    })
+  )
+  const decoders: DecoderInst[] = made
+    .filter((d) => d !== null)
+    .map((d, n) => ({ ...d, name: NAMES[d.config.kind], color: DECODER_COLORS[n % DECODER_COLORS.length] }))
+  if (!decoders.length) return
+  set({ decoders, table: { decoder: decoders[0].id, row: 0, focus: null } })
+  for (const d of decoders) engine.decode(d.id)
 }
 
 export async function updateDecoder(id: number, patch: Partial<DecoderConfig>) {
