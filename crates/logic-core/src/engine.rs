@@ -410,7 +410,7 @@ esac"#,
         let list = e.rescan_devices();
         let ran = calls();
         assert!(ran >= 4, "sigrok-cli calls: {ran}");
-        assert!(!std::fs::read_to_string(&log).unwrap().contains("fx2lafw"), "fx2lafw never scanned");
+        assert!(std::fs::read_to_string(&log).unwrap().contains("-d fx2lafw --scan"), "fx2lafw scanned too");
         let ids: Vec<String> = list.iter().map(|d| d.id.clone()).collect();
         let n = ids.len();
         assert_eq!(ids[n - 2..], ["sigrok:ols:/dev/ttyACM0", devices::demo::ID]);
