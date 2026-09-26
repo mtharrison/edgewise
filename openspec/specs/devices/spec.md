@@ -17,8 +17,8 @@ The system SHALL list every connected supported FX2 board, then every device fou
 - **THEN** it appears in the list before the demo device, with driver `fx2lafw`
 
 #### Scenario: FX2 board and sigrok device connected
-- **WHEN** an FX2 board is connected and the sigrok scan found a DSLogic
-- **THEN** the list is the FX2 board, then the DSLogic, then the demo device
+- **WHEN** an FX2 board is connected, `sigrok-cli` is installed, and the sigrok scan found the FX2 board and a DSLogic
+- **THEN** the list is the FX2 board with driver `fx2lafw`, then the FX2 board and the DSLogic with driver `sigrok`, then the demo device
 
 ### Requirement: Demo device
 The system SHALL provide an 8-channel demo device that streams a repeating 20 ms synthetic pattern in real time: UART at 115200 baud on D0, I²C at 400 kHz on D1 (SCL) and D2 (SDA), SPI at 2 MHz on D3 (clock), D4 (MOSI), D5 (MISO) and D6 (chip select, active low), and 10 kHz PWM with a sweeping duty cycle on D7. Its sample rates SHALL be 4, 8, 10, 20, 25, 50 and 100 MHz, with 20 MHz as the default.
@@ -116,11 +116,15 @@ The system SHALL look for a `sigrok-cli` executable in this order: the directori
 - **THEN** the device list is unchanged and the reported status says it was not found and gives the download page
 
 ### Requirement: Sigrok scan
-The system SHALL scan through `sigrok-cli` only for the sigrok drivers on an allow-list of logic-analyzer drivers that the found `sigrok-cli` also reports. The allow-list SHALL NOT contain any driver for a family that Edgewise drives natively, so FX2 boards are never scanned or opened by `sigrok-cli`. The allow-list SHALL NOT contain sigrok's `demo` driver. A comma-separated list of driver names in the `EDGEWISE_SIGROK_DRIVERS` environment variable SHALL be added to the allow-list. The scan SHALL run at launch and when the user asks for a rescan, and never as part of the regular device refresh. Its result SHALL be kept and reused by every device listing until the next scan. A driver whose scan takes longer than 10 seconds SHALL be treated as having found nothing, and the rest of the scan SHALL still complete.
+The system SHALL scan through `sigrok-cli` only for the sigrok drivers on an allow-list of logic-analyzer drivers that the found `sigrok-cli` also reports. The allow-list SHALL contain `fx2lafw`, so an FX2 board is offered both through its native driver and through `sigrok-cli`, and the user can choose either. The allow-list SHALL NOT contain sigrok's `demo` driver. A comma-separated list of driver names in the `EDGEWISE_SIGROK_DRIVERS` environment variable SHALL be added to the allow-list. The scan SHALL run at launch and when the user asks for a rescan, and never as part of the regular device refresh. Its result SHALL be kept and reused by every device listing until the next scan. A driver whose scan takes longer than 10 seconds SHALL be treated as having found nothing, and the rest of the scan SHALL still complete.
 
 #### Scenario: FX2 board connected with sigrok-cli installed
 - **WHEN** an FX2 board is connected and a scan runs
-- **THEN** `sigrok-cli` is not asked to scan for FX2 boards, and the board appears exactly once, with driver `fx2lafw`
+- **THEN** the board appears twice: once with driver `fx2lafw` and once with driver `sigrok`, and a capture can be started on either
+
+#### Scenario: FX2 board connected without sigrok-cli
+- **WHEN** an FX2 board is connected and no `sigrok-cli` is found
+- **THEN** the board appears exactly once, with driver `fx2lafw`
 
 #### Scenario: Regular refresh
 - **WHEN** the device list refreshes on its 3-second interval

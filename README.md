@@ -41,6 +41,8 @@ Needs Rust (rustup) and Node 20+.
 
 FX2-based boards running sigrok's `fx2lafw` firmware. If the board has no firmware yet, Edgewise uploads it. It looks for the `.fw` files in the app's firmware folder (File → Open Firmware Folder), in installed PulseView bundles, and in the usual `sigrok-firmware` locations.
 
+With [sigrok-cli](https://sigrok.org/wiki/Downloads) installed, Edgewise also lists the logic analyzers it finds through sigrok's own drivers (DSLogic, Kingst, OLS and others) and captures through `sigrok-cli`. An FX2 board is offered both ways, "via sigrok-cli" in the picker, so the two paths can be compared.
+
 ## License
 
 MIT

@@ -33,6 +33,7 @@ export function TopBar() {
               {devices.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
+                  {d.driver === 'sigrok' ? ' via sigrok-cli' : ''}
                   {d.id === deviceId && !deviceConnected ? ' (disconnected)' : ''}
                 </option>
               ))}

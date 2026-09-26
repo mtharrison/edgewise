@@ -1,10 +1,12 @@
-//! Fallback for hardware without a native driver: an installed upstream
-//! `sigrok-cli`, run as a separate process.
+//! Second way to drive hardware: an installed upstream `sigrok-cli`, run as
+//! a separate process. It covers boards without a native driver, and FX2
+//! boards are offered both ways so either path can be compared.
 //!
-//! Only an allow-list of logic-analyzer drivers is scanned, and it never
-//! includes `fx2lafw`: libsigrok uploads firmware during a scan, which would
-//! fight the native FX2 driver. Capture streams `-O binary` from stdout into
-//! the sink; one byte on stdin stops `sigrok-cli` with its data flushed.
+//! Only an allow-list of logic-analyzer drivers is scanned. libsigrok
+//! uploads firmware to a bare FX2 board during the scan; the native driver
+//! then finds the board ready. Scans never run while a capture holds a
+//! board. Capture streams `-O binary` from stdout into the sink; one byte
+//! on stdin stops `sigrok-cli` with its data flushed.
 
 use super::{stall_message, DeviceInfo, Driver};
 use serde::Serialize;
@@ -19,12 +21,13 @@ pub const DOWNLOAD_PAGE: &str = "https://sigrok.org/wiki/Downloads";
 const MAX_CHANNELS: usize = 16;
 const DEFAULT_RATE_CEILING: u64 = 24_000_000;
 
-/// Logic-analyzer drivers scanned by default. No FX2 families, no `demo`.
+/// Logic-analyzer drivers scanned by default. No `demo`.
 const ALLOWED: &[&str] = &[
     "asix-sigma",
     "beaglelogic",
     "chronovu-la",
     "dreamsourcelab-dslogic",
+    "fx2lafw",
     "hantek-4032l",
     "ikalogic-scanalogic2",
     "ikalogic-scanaplus",
@@ -37,9 +40,6 @@ const ALLOWED: &[&str] = &[
     "sysclk-lwla",
     "zeroplus-logic-cube",
 ];
-/// Natively driven; never handed to `sigrok-cli`, even through the variable.
-const NATIVE: &[&str] = &["fx2lafw"];
-
 #[derive(Clone, Copy, Debug)]
 pub struct Timeouts {
     /// `-V` and `-L` while locating.
@@ -431,7 +431,7 @@ pub fn allowed_drivers(reported: &[String], extra: Option<&str>) -> Vec<String> 
     let extra = extra.unwrap_or("").split(',').map(str::trim).filter(|s| !s.is_empty());
     let mut v: Vec<String> = Vec::new();
     for d in ALLOWED.iter().copied().chain(extra) {
-        if !NATIVE.contains(&d) && reported.iter().any(|r| r == d) && !v.iter().any(|x| x == d) {
+        if reported.iter().any(|r| r == d) && !v.iter().any(|x| x == d) {
             v.push(d.to_string());
         }
     }
@@ -797,11 +797,10 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn allow_list_never_includes_fx2lafw_or_demo_by_default() {
+    fn allow_list_has_fx2lafw_but_never_demo_by_default() {
         let reported = strings(&["demo", "fx2lafw", "ols", "dreamsourcelab-dslogic", "agilent-dmm"]);
-        assert_eq!(allowed_drivers(&reported, None), strings(&["dreamsourcelab-dslogic", "ols"]));
-        assert_eq!(allowed_drivers(&reported, Some("demo, fx2lafw")), strings(&["dreamsourcelab-dslogic", "ols", "demo"]));
-        assert_eq!(allowed_drivers(&reported, Some("fx2lafw")), strings(&["dreamsourcelab-dslogic", "ols"]));
+        assert_eq!(allowed_drivers(&reported, None), strings(&["dreamsourcelab-dslogic", "fx2lafw", "ols"]));
+        assert_eq!(allowed_drivers(&reported, Some("demo, fx2lafw")), strings(&["dreamsourcelab-dslogic", "fx2lafw", "ols", "demo"]));
         // Not reported by this sigrok-cli: skipped.
         assert_eq!(allowed_drivers(&strings(&["ols"]), Some("demo")), strings(&["ols"]));
     }
