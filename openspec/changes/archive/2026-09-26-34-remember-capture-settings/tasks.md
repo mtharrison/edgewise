@@ -22,5 +22,5 @@
 ## 4. Verify and archive
 
 - [x] 4.1 Run `npm test`, `npm run typecheck` and `npx openspec validate --all --strict`; all pass
-- [ ] 4.2 Run `openspec-verify-change` for `34-remember-capture-settings` and fix what it finds. List under "Not verified" in the PR: restoring a real FX2 board after restart, and falling back to the demo device when that board is unplugged (needs hardware)
-- [ ] 4.3 Archive the change with `openspec-archive-change` so the `app-shell` deltas land in `openspec/specs/`, and verify `npx openspec validate --all --strict` still passes
+- [x] 4.2 Run `openspec-verify-change` for `34-remember-capture-settings` and fix what it finds. List under "Not verified" in the PR: restoring a real FX2 board after restart, and falling back to the demo device when that board is unplugged (needs hardware)
+- [x] 4.3 Archive the change with `openspec-archive-change` so the `app-shell` deltas land in `openspec/specs/`, and verify `npx openspec validate --all --strict` still passes
