@@ -1,4 +1,4 @@
-import type { Annotation, DecoderConfig, DeviceInfo, Measurement, Status } from './types'
+import type { Annotation, DecoderConfig, DeviceInfo, Measurement, SigrokStatus, Status } from './types'
 
 interface Bridge {
   call: (method: string, ...args: unknown[]) => Promise<any>
@@ -22,6 +22,9 @@ const call = bridge.call
 /** Typed wrapper over the Rust engine living in the main process. */
 export const engine = {
   listDevices: (): Promise<DeviceInfo[]> => call('listDevices'),
+  /** Full scan including sigrok-cli; can take seconds. */
+  rescanDevices: (): Promise<DeviceInfo[]> => call('rescanDevices'),
+  sigrokStatus: (): Promise<SigrokStatus> => call('sigrokStatus'),
   start: (opts: {
     deviceId: string
     samplerate: number

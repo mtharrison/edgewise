@@ -338,11 +338,7 @@ impl Driver for Fx2 {
                 Next::Stopped => break,
                 Next::TimedOut => {
                     let why = error.take().map(|e| format!(" ({e})")).unwrap_or_default();
-                    result = Err(format!(
-                        "Device stopped sending after {} samples{why}. Captured data was kept. \
-                         Try another cable or USB port, or a lower sample rate.",
-                        received / unit
-                    ));
+                    result = Err(super::stall_message(received / unit, &why));
                     break;
                 }
                 Next::Done(c) => {

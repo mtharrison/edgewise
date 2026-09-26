@@ -37,6 +37,8 @@ export interface State {
   devices: DeviceInfo[]
   deviceId: string | null
   deviceConnected: boolean
+  /** A full device scan (including sigrok-cli) is running. */
+  scanning: boolean
   samplerate: number
   duration: number
   pretrigger: number
@@ -57,6 +59,7 @@ export const useStore = create<State>(() => ({
   devices: [],
   deviceId: null,
   deviceConnected: true,
+  scanning: false,
   samplerate: 20_000_000,
   duration: 0.1,
   pretrigger: 0.1,

@@ -15,7 +15,7 @@ const engine = new Engine()
 
 // Methods the renderer may call. Everything else stays in the main process.
 const ENGINE_METHODS = new Set([
-  'listDevices', 'start', 'stop', 'status', 'render', 'samples', 'measure', 'findEdge', 'burstAt',
+  'listDevices', 'rescanDevices', 'sigrokStatus', 'start', 'stop', 'status', 'render', 'samples', 'measure', 'findEdge', 'burstAt',
   'addDecoder', 'updateDecoder', 'removeDecoder', 'decode', 'decoderRows',
   'annotations', 'annotationPage', 'annotationIndex', 'load', 'save', 'exportVcd'
 ])
@@ -130,6 +130,8 @@ function createWindow() {
 app.whenReady().then(() => {
   mkdirSync(userFirmwareDir, { recursive: true })
   engine.setFirmwareDirs(firmwareDirs())
+  // Until #58 adds a setting for it; unset means search PATH and the usual folders.
+  engine.setSigrokPath(process.env.EDGEWISE_SIGROK_CLI || null)
 
   ipcMain.handle('engine', (_e, method: string, args: unknown[]) => {
     if (!ENGINE_METHODS.has(method)) throw new Error(`Unknown engine method ${method}`)

@@ -4,7 +4,7 @@
 
 use crate::capture::{Capture, Snapshot};
 use crate::decoders::{self, Annotation, DecoderConfig};
-use crate::devices;
+use crate::devices::{self, sigrok};
 use crate::trigger::{Feeder, TriggerTerm};
 use parking_lot::{Mutex, RwLock};
 use serde::{Deserialize, Serialize};
@@ -82,6 +82,10 @@ struct Decoder {
 
 pub struct Engine {
     fw_dirs: Mutex<Vec<PathBuf>>,
+    sigrok_path: Mutex<Option<PathBuf>>,
+    sigrok_cli: Mutex<Option<sigrok::Cli>>,
+    /// Result of the last rescan, reused by every listing.
+    sigrok_devices: Mutex<Vec<sigrok::SigrokDevice>>,
     capture: Mutex<Arc<Capture>>,
     capture_id: AtomicU64,
     acq: Mutex<Option<Acquisition>>,
@@ -101,6 +105,9 @@ impl Engine {
     pub fn new() -> Engine {
         Engine {
             fw_dirs: Mutex::new(Vec::new()),
+            sigrok_path: Mutex::new(None),
+            sigrok_cli: Mutex::new(None),
+            sigrok_devices: Mutex::new(Vec::new()),
             capture: Mutex::new(Arc::new(Capture::new(1_000_000, 8))),
             capture_id: AtomicU64::new(0),
             acq: Mutex::new(None),
@@ -115,8 +122,38 @@ impl Engine {
         *self.fw_dirs.lock() = dirs;
     }
 
+    /// Path to use for `sigrok-cli` instead of searching for it.
+    pub fn set_sigrok_path(&self, path: Option<PathBuf>) {
+        *self.sigrok_path.lock() = path;
+    }
+
+    /// Cheap: never runs `sigrok-cli`; sigrok devices come from the last rescan.
     pub fn list_devices(&self) -> Vec<devices::DeviceInfo> {
-        devices::list(&self.fw_dirs.lock())
+        devices::list(&self.fw_dirs.lock(), &self.sigrok_devices.lock())
+    }
+
+    /// Slow (up to ~10 s): locates `sigrok-cli`, scans for its devices, then lists.
+    pub fn rescan_devices(&self) -> Vec<devices::DeviceInfo> {
+        self.rescan_with(std::env::var("EDGEWISE_SIGROK_DRIVERS").ok().as_deref(), &sigrok::TIMEOUTS);
+        self.list_devices()
+    }
+
+    fn rescan_with(&self, extra: Option<&str>, t: &sigrok::Timeouts) {
+        let given = self.sigrok_path.lock().clone();
+        let candidates = sigrok::candidates(std::env::var_os("PATH").as_deref());
+        // No engine lock is held while sigrok-cli runs.
+        let cli = sigrok::locate(given.as_deref(), &candidates, t);
+        let found = match &cli {
+            Some(c) => sigrok::scan(c, &sigrok::allowed_drivers(&c.drivers, extra), t),
+            None => vec![],
+        };
+        *self.sigrok_cli.lock() = cli;
+        *self.sigrok_devices.lock() = found;
+    }
+
+    /// The `sigrok-cli` found by the last rescan, or where to download it.
+    pub fn sigrok_status(&self) -> sigrok::Status {
+        sigrok::Status::of(self.sigrok_cli.lock().as_ref())
     }
 
     pub fn snapshot(&self) -> Snapshot {
@@ -131,7 +168,7 @@ impl Engine {
     pub fn start(&self, opts: StartOptions) -> Result<(), String> {
         self.stop();
         let fw = self.fw_dirs.lock().clone();
-        let mut driver = devices::open(&opts.device_id, &fw)?;
+        let mut driver = devices::open(&opts.device_id, &fw, &self.sigrok_devices.lock())?;
         let channels = driver.channels();
         let cap = Arc::new(Capture::new(opts.samplerate, channels));
         self.replace_capture(cap.clone());
@@ -316,5 +353,173 @@ impl Engine {
         };
         let rows = rows.read();
         rows.get(row).map_or(0, |r| r.partition_point(|a| a.end < sample))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{Duration, Instant};
+
+    fn wait_done(e: &Engine, timeout: Duration) -> Status {
+        let t0 = Instant::now();
+        loop {
+            let st = e.status();
+            if matches!(st.state, AcqState::Done | AcqState::Error) || t0.elapsed() > timeout {
+                return st;
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+    }
+
+    #[test]
+    fn missing_sigrok_cli_leaves_the_list_unchanged() {
+        let e = Engine::new();
+        e.set_sigrok_path(Some("/nonexistent/sigrok-cli".into()));
+        let before: Vec<String> = e.list_devices().into_iter().map(|d| d.id).collect();
+        let after: Vec<String> = e.rescan_devices().into_iter().map(|d| d.id).collect();
+        assert_eq!(before, after);
+        assert_eq!(after.last().map(String::as_str), Some(devices::demo::ID));
+        let st = e.sigrok_status();
+        assert!(!st.found);
+        assert_eq!(st.download.as_deref(), Some(sigrok::DOWNLOAD_PAGE));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn listing_reuses_the_scan_without_running_sigrok_cli() {
+        let log = std::env::temp_dir().join(format!("edgewise-sigrok-calls-{}", std::process::id()));
+        let _ = std::fs::remove_file(&log);
+        let bin = sigrok::tests::stub::script(
+            "engine",
+            &format!(
+                r#"echo "$*" >> '{}'
+case "$*" in
+  -V) echo 'sigrok-cli 0.7.2' ;;
+  -L) echo 'Supported hardware drivers:'; echo '  ols  OLS'; echo '  fx2lafw  FX2' ;;
+  "-d ols --scan") echo "ols:conn=/dev/ttyACM0 - Openbench Logic Sniffer v1.01 with 2 channels: 0 1" ;;
+  *--show*) echo "    samplerate (10 Hz - 100 MHz in steps of 1 Hz)" ;;
+  *) exit 1 ;;
+esac"#,
+                log.display()
+            ),
+        );
+        let calls = || std::fs::read_to_string(&log).unwrap_or_default().lines().count();
+        let e = Engine::new();
+        e.set_sigrok_path(Some(bin.clone()));
+        let list = e.rescan_devices();
+        let ran = calls();
+        assert!(ran >= 4, "sigrok-cli calls: {ran}");
+        assert!(!std::fs::read_to_string(&log).unwrap().contains("fx2lafw"), "fx2lafw never scanned");
+        let ids: Vec<String> = list.iter().map(|d| d.id.clone()).collect();
+        let n = ids.len();
+        assert_eq!(ids[n - 2..], ["sigrok:ols:/dev/ttyACM0", devices::demo::ID]);
+        assert!(ids[..n - 2].iter().all(|i| i.starts_with("fx2:")));
+        assert_eq!(list[n - 2].default_samplerate, 20_000_000);
+
+        for _ in 0..3 {
+            let again: Vec<String> = e.list_devices().into_iter().map(|d| d.id).collect();
+            assert!(again.contains(&"sigrok:ols:/dev/ttyACM0".to_string()));
+        }
+        assert_eq!(calls(), ran, "list_devices ran sigrok-cli");
+        let st = e.sigrok_status();
+        assert_eq!((st.found, st.version.as_deref(), st.path), (true, Some("0.7.2"), Some(bin.display().to_string())));
+        let _ = std::fs::remove_file(&log);
+    }
+
+    /// With a real `sigrok-cli` on PATH (CI installs one); skipped otherwise.
+    fn real_demo() -> Option<Engine> {
+        let cands = sigrok::candidates(std::env::var_os("PATH").as_deref());
+        let Some(cli) = sigrok::locate(None, &cands, &sigrok::TIMEOUTS) else {
+            eprintln!("sigrok-cli not installed; skipping");
+            return None;
+        };
+        save_real_output(&cli.path);
+        let e = Engine::new();
+        e.rescan_with(Some("demo"), &sigrok::TIMEOUTS);
+        Some(e)
+    }
+
+    /// Keeps the raw output next to the UI screenshots, so CI uploads it for fixtures.
+    fn save_real_output(bin: &std::path::Path) {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../ui-checks/sigrok-output");
+        let _ = std::fs::create_dir_all(&dir);
+        for (name, args) in [
+            ("version", &["-V"][..]),
+            ("drivers", &["-L"]),
+            ("scan-demo", &["-d", "demo", "--scan"]),
+            ("show-demo", &["-d", "demo", "--show"]),
+        ] {
+            let out = sigrok::run(bin, args, Duration::from_secs(10)).unwrap_or_default();
+            let _ = std::fs::write(dir.join(format!("{name}.txt")), out);
+        }
+    }
+
+    #[test]
+    fn real_sigrok_demo_is_listed_with_8_channels() {
+        let Some(e) = real_demo() else { return };
+        let list = e.list_devices();
+        let dev = list.iter().find(|d| d.id == "sigrok:demo").unwrap_or_else(|| panic!("{list:?}"));
+        assert_eq!(dev.channels, 8);
+        assert_eq!(dev.driver, "sigrok");
+        assert!(dev.note.as_deref().unwrap_or("").starts_with("via sigrok-cli "), "{:?}", dev.note);
+        assert!(dev.samplerates.contains(&1_000_000), "{:?}", dev.samplerates);
+    }
+
+    #[test]
+    fn real_sigrok_demo_timed_capture() {
+        let Some(e) = real_demo() else { return };
+        let opts = StartOptions {
+            device_id: "sigrok:demo".into(),
+            samplerate: 1_000_000,
+            sample_limit: 100_000,
+            trigger: vec![],
+            pretrigger: 0.1,
+        };
+        e.start(opts).unwrap();
+        let st = wait_done(&e, Duration::from_secs(15));
+        assert_eq!((st.state, st.message.as_str(), st.samples), (AcqState::Done, "", 100_000));
+    }
+
+    #[test]
+    fn real_sigrok_demo_triggered_capture() {
+        let Some(e) = real_demo() else { return };
+        let trigger = serde_json::from_str(r#"[{"channel":0,"condition":"rising"}]"#).unwrap();
+        let opts = StartOptions {
+            device_id: "sigrok:demo".into(),
+            samplerate: 1_000_000,
+            sample_limit: 100_000,
+            trigger,
+            pretrigger: 0.1,
+        };
+        e.start(opts).unwrap();
+        let st = wait_done(&e, Duration::from_secs(15));
+        assert_eq!((st.state, st.samples), (AcqState::Done, 100_000), "{}", st.message);
+        // The demo's D0 toggles within the first few samples, so the pre-trigger
+        // buffer holds only what came before that first rising edge.
+        let t = st.trigger.expect("trigger recorded");
+        assert!(t > 0 && t <= 10_000, "trigger at {t}");
+        let s = e.snapshot();
+        assert_eq!((s.get(t - 1) & 1, s.get(t) & 1), (0, 1), "rising edge on D0 at {t}");
+    }
+
+    #[test]
+    fn real_sigrok_demo_stop() {
+        let Some(e) = real_demo() else { return };
+        let opts = StartOptions {
+            device_id: "sigrok:demo".into(),
+            samplerate: 1_000_000,
+            sample_limit: 0,
+            trigger: vec![],
+            pretrigger: 0.1,
+        };
+        e.start(opts).unwrap();
+        std::thread::sleep(Duration::from_millis(1500));
+        let t0 = Instant::now();
+        e.stop();
+        assert!(t0.elapsed() < Duration::from_millis(1500), "{:?}", t0.elapsed());
+        let st = e.status();
+        assert_eq!(st.state, AcqState::Done, "{}", st.message);
+        assert!(st.samples > 0);
     }
 }

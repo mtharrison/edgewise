@@ -5,6 +5,7 @@ vi.mock('./api', () => ({
   bridge: { chooseFirmware: vi.fn() },
   engine: {
     listDevices: vi.fn(),
+    rescanDevices: vi.fn(),
     start: vi.fn(),
     addDecoder: vi.fn(),
     decoderRows: vi.fn(),
@@ -54,6 +55,7 @@ const otherModel = device('fx2:1234:5678:1')
 beforeEach(() => {
   useStore.setState(useStore.getInitialState(), true)
   vi.mocked(engine.listDevices).mockReset()
+  vi.mocked(engine.rescanDevices).mockReset()
   vi.mocked(engine.removeDecoder).mockReset()
   let nextId = 1
   vi.mocked(engine.addDecoder).mockImplementation(async () => nextId++)
@@ -237,6 +239,64 @@ describe('restoreSettings', () => {
 
     expect(useStore.getState().deviceId).toBe(demo.id)
     expect(engine.addDecoder).toHaveBeenCalledTimes(2)
+  })
+})
+
+const dslogic = device('sigrok:dreamsourcelab-dslogic:1.7', {
+  driver: 'sigrok',
+  channels: 16,
+  samplerates: [1_000_000, 20_000_000, 100_000_000],
+  note: 'via sigrok-cli 0.7.2'
+})
+
+describe('refreshDevices with rescan', () => {
+  it('runs the full scan for a rescan and only lists devices on the regular tick', async () => {
+    vi.mocked(engine.rescanDevices).mockResolvedValueOnce([demo, dslogic])
+    await refreshDevices({ rescan: true })
+    expect(engine.rescanDevices).toHaveBeenCalledOnce()
+    expect(engine.listDevices).not.toHaveBeenCalled()
+
+    vi.mocked(engine.listDevices).mockResolvedValueOnce([demo, dslogic])
+    await refreshDevices()
+    expect(engine.listDevices).toHaveBeenCalledOnce()
+    expect(engine.rescanDevices).toHaveBeenCalledOnce()
+    expect(useStore.getState().devices.map((d) => d.id)).toEqual([demo.id, dslogic.id])
+  })
+
+  it('sets scanning while the scan runs and skips plain refreshes meanwhile', async () => {
+    let finish!: (l: DeviceInfo[]) => void
+    vi.mocked(engine.rescanDevices).mockReturnValueOnce(new Promise((r) => (finish = r)))
+    const scan = refreshDevices({ rescan: true })
+    expect(useStore.getState().scanning).toBe(true)
+    await refreshDevices()
+    expect(engine.listDevices).not.toHaveBeenCalled()
+    finish([demo])
+    await scan
+    expect(useStore.getState().scanning).toBe(false)
+  })
+
+  it('fits remembered settings to the rescan result so a remembered sigrok device is selected', async () => {
+    const channels = makeChannels(16)
+    channels[0] = { ...channels[0], name: 'CLK' }
+    restoreSettings(toSaved({ deviceId: dslogic.id, samplerate: 100_000_000, duration: 1, pretrigger: 0.1, channels, decoders: [] }))
+    vi.mocked(engine.rescanDevices).mockResolvedValueOnce([demo, dslogic])
+    await refreshDevices({ rescan: true })
+
+    const s = useStore.getState()
+    expect(s).toMatchObject({ deviceId: dslogic.id, samplerate: 100_000_000, deviceConnected: true })
+    expect(s.channels[0].name).toBe('CLK')
+  })
+
+  it('keeps the selection when a rescan finds a new sigrok device', async () => {
+    vi.mocked(engine.listDevices).mockResolvedValueOnce([demo])
+    await refreshDevices()
+    expect(useStore.getState().deviceId).toBe(demo.id)
+
+    vi.mocked(engine.rescanDevices).mockResolvedValueOnce([dslogic, demo])
+    await refreshDevices({ rescan: true })
+    const s = useStore.getState()
+    expect(s.deviceId).toBe(demo.id)
+    expect(s.devices.map((d) => d.id)).toEqual([dslogic.id, demo.id])
   })
 })
 
