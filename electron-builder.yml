@@ -11,6 +11,7 @@ extraResources:
     to: native
     filter: ['*.node']
 npmRebuild: false
+afterPack: scripts/after-pack.mjs
 artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 mac:
   target: dmg
