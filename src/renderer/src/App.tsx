@@ -1,12 +1,26 @@
 import { useEffect } from 'react'
 import { bridge, engine } from './api'
-import { centerOn, fit, isBusy, openFile, panBy, pollStatus, refreshDevices, saveFile, toggleCapture, zoomAt } from './actions'
+import {
+  centerOn,
+  fit,
+  isBusy,
+  openFile,
+  panBy,
+  pollStatus,
+  refreshDevices,
+  resetSettings,
+  restoreSettings,
+  saveFile,
+  toggleCapture,
+  zoomAt
+} from './actions'
 import { Overview } from './components/Overview'
 import { RightPanel } from './components/RightPanel'
 import { StatusBar } from './components/StatusBar'
 import { TopBar } from './components/TopBar'
 import { Waveform } from './components/Waveform'
-import { get, set } from './store'
+import { load, save, toSaved } from './settings'
+import { get, set, useStore } from './store'
 
 async function jumpEdge(forward: boolean) {
   const { hover, channels, view, plotWidth } = get()
@@ -65,7 +79,20 @@ function onKey(e: KeyboardEvent) {
 
 export function App() {
   useEffect(() => {
-    refreshDevices()
+    // Save only once the saved settings are restored, so start-up defaults never overwrite them.
+    let offSave = () => {}
+    const startSaving = () => {
+      let last = JSON.stringify(toSaved(get()))
+      offSave = useStore.subscribe((s) => {
+        const saved = toSaved(s)
+        const text = JSON.stringify(saved)
+        if (text === last) return
+        last = text
+        save(saved)
+      })
+    }
+    restoreSettings(load())
+    refreshDevices().then(startSaving, startSaving)
     let timer: ReturnType<typeof setTimeout>
     let lastScan = performance.now()
     const tick = async () => {
@@ -89,8 +116,10 @@ export function App() {
       else if (cmd === 'export') saveFile('vcd')
       else if (cmd === 'toggle') toggleCapture()
       else if (cmd === 'fit') fit()
+      else if (cmd === 'reset') resetSettings()
     })
     return () => {
+      offSave()
       clearTimeout(timer)
       window.removeEventListener('keydown', onKey)
       offMenu()

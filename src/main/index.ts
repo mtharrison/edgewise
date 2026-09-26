@@ -66,7 +66,9 @@ function buildMenu() {
       label: 'Capture',
       submenu: [
         { label: 'Start / Stop', accelerator: 'CmdOrCtrl+R', click: () => send('toggle') },
-        { label: 'Zoom to Fit', accelerator: 'CmdOrCtrl+0', click: () => send('fit') }
+        { label: 'Zoom to Fit', accelerator: 'CmdOrCtrl+0', click: () => send('fit') },
+        { type: 'separator' },
+        { label: 'Reset Capture Settings', click: () => send('reset') }
       ]
     },
     { role: 'viewMenu' },

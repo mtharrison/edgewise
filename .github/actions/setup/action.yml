@@ -1,8 +1,8 @@
 name: Setup
-description: Node, Rust and npm dependencies. With `electron`, also the Electron binary and xvfb so the app can run.
+description: Node, Rust and npm dependencies. With `electron`, also the Electron binary, xvfb and ffmpeg so the app can run and be recorded.
 inputs:
   electron:
-    description: Install the Electron binary and xvfb
+    description: Install the Electron binary, xvfb and ffmpeg (GIFs from scripts/ui.mjs)
     default: 'false'
 runs:
   using: composite
@@ -18,5 +18,5 @@ runs:
       env:
         ELECTRON_SKIP_BINARY_DOWNLOAD: ${{ inputs.electron != 'true' && '1' || '' }}
     - if: inputs.electron == 'true'
-      run: sudo apt-get update -qq && sudo apt-get install -y -qq xvfb
+      run: sudo apt-get update -qq && sudo apt-get install -y -qq xvfb ffmpeg
       shell: bash

@@ -500,8 +500,29 @@ input[type='checkbox'] {
 }
 
 .icon-btn.trig.on {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: auto;
+  padding: 0 6px;
+  font-size: 11px;
+  white-space: nowrap;
   color: var(--danger);
   background: rgba(255, 85, 119, 0.12);
+}
+
+.trig-tip {
+  position: fixed;
+  z-index: 60;
+  pointer-events: none;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: rgba(20, 22, 30, 0.96);
+  border: 1px solid var(--border-2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  font-size: 11.5px;
+  line-height: 1.6;
+  white-space: nowrap;
 }
 
 .dec-label {
