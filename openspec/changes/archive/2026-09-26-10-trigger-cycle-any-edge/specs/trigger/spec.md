@@ -1,0 +1,34 @@
+# Spec Delta
+
+## MODIFIED Requirements
+
+### Requirement: Trigger editing in the UI
+The user SHALL be able to set each channel's condition from a trigger popover that lists all five conditions, and SHALL be able to cycle a channel's condition from its label through none, rising, falling, any edge, high and low, returning to none after low. When a channel has a condition, its trigger button SHALL show the condition's name ("Rising", "Falling", "Any edge", "High" or "Low") next to its icon. Each condition's icon SHALL differ from the icon shown when no condition is set. Hovering the trigger button SHALL show a tooltip that explains what the current condition means; when no condition is set, the tooltip SHALL list every condition with what it means. The popover SHALL offer a pre-trigger slider from 0% to 90% in 5% steps (default 10%) and a "Clear trigger" action. The trigger chip SHALL summarise the active conditions, joined by "&".
+
+#### Scenario: Set from popover
+- **WHEN** the user picks "Any edge" for D3 in the trigger popover
+- **THEN** the chip shows D3's condition and the next capture waits for any D3 transition
+
+#### Scenario: Cycle from channel label
+- **WHEN** a channel has no trigger condition and the user clicks its trigger button six times
+- **THEN** its condition becomes rising, falling, any edge, high, low and then none again, in that order
+
+#### Scenario: Any edge reachable from channel label
+- **WHEN** a channel's condition is falling and the user clicks its trigger button once
+- **THEN** its condition becomes any edge and the trigger chip shows it
+
+#### Scenario: Trigger button names the condition
+- **WHEN** a channel's condition is any edge
+- **THEN** its trigger button shows the text "Any edge" next to the icon
+
+#### Scenario: Any edge icon differs from no trigger
+- **WHEN** a channel's condition is any edge
+- **THEN** its trigger button shows an up-down arrow icon, not the ⚡ shown when no condition is set
+
+#### Scenario: Tooltip explains the condition
+- **WHEN** a channel's condition is rising and the user hovers its trigger button
+- **THEN** the tooltip says the trigger fires when the channel goes from low to high
+
+#### Scenario: Tooltip explains every condition when none is set
+- **WHEN** a channel has no trigger condition and the user hovers its trigger button
+- **THEN** the tooltip lists Rising, Falling, Any edge, High and Low, each with what it means

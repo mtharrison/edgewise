@@ -7,7 +7,7 @@ vi.mock('./api', () => ({
 }))
 
 import { engine } from './api'
-import { refreshDevices, sameFx2Model, selectDevice } from './actions'
+import { cycleTrigger, refreshDevices, sameFx2Model, selectDevice, setTrigger } from './actions'
 import { useStore } from './store'
 
 function device(id: string, overrides: Partial<DeviceInfo> = {}): DeviceInfo {
@@ -112,5 +112,29 @@ describe('refreshDevices', () => {
     await refreshDevices()
 
     expect(useStore.getState().deviceId).toBe(demo.id)
+  })
+})
+
+describe('cycleTrigger', () => {
+  const triggerOf = (index: number) => useStore.getState().channels.find((c) => c.index === index)?.trigger
+
+  it('steps from none through rising, falling, any edge, high, low and back to none', () => {
+    const seen = []
+    for (let i = 0; i < 6; i++) {
+      cycleTrigger(3)
+      seen.push(triggerOf(3))
+    }
+    expect(seen).toEqual(['rising', 'falling', 'edge', 'high', 'low', null])
+  })
+
+  it('goes from falling to any edge without touching other channels', () => {
+    setTrigger(0, 'high')
+    setTrigger(3, 'falling')
+
+    cycleTrigger(3)
+
+    expect(triggerOf(3)).toBe('edge')
+    expect(triggerOf(0)).toBe('high')
+    expect(useStore.getState().channels.filter((c) => c.trigger !== null)).toHaveLength(2)
   })
 })
