@@ -2,7 +2,7 @@
 
 ## Context
 
-See proposal.md (Why). The channel trigger button in the waveform's channel label (`Waveform.tsx`) calls `cycleTrigger`, which steps through a fixed `TRIGGER_CYCLE` list in `src/renderer/src/actions.ts`: `[null, 'rising', 'falling', 'high', 'low']`. The popover uses `setTrigger` and is unaffected. The button already has an icon for `edge`, so it renders correctly once the cycle can reach it.
+See proposal.md (Why). The channel trigger button in the waveform's channel label (`Waveform.tsx`) calls `cycleTrigger`, which steps through a fixed `TRIGGER_CYCLE` list in `src/renderer/src/actions.ts`: `[null, 'rising', 'falling', 'high', 'low']`. The popover uses `setTrigger` and is unaffected. The button already had an icon for `edge` (⚡), so it rendered once the cycle could reach it. A later decision below gives `edge` its own ↕ icon.
 
 ## Goals / Non-Goals
 
