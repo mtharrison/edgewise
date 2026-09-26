@@ -494,7 +494,13 @@ esac"#,
         };
         e.start(opts).unwrap();
         let st = wait_done(&e, Duration::from_secs(15));
-        assert_eq!((st.state, st.samples, st.trigger), (AcqState::Done, 100_000, Some(10_000)), "{}", st.message);
+        assert_eq!((st.state, st.samples), (AcqState::Done, 100_000), "{}", st.message);
+        // The demo's D0 toggles within the first few samples, so the pre-trigger
+        // buffer holds only what came before that first rising edge.
+        let t = st.trigger.expect("trigger recorded");
+        assert!(t > 0 && t <= 10_000, "trigger at {t}");
+        let s = e.snapshot();
+        assert_eq!((s.get(t - 1) & 1, s.get(t) & 1), (0, 1), "rising edge on D0 at {t}");
     }
 
     #[test]

@@ -166,7 +166,7 @@ Starting a capture on a sigrok device SHALL run `sigrok-cli` for that device wit
 
 #### Scenario: Triggered capture
 - **WHEN** a 100 000-sample capture on a sigrok device has a rising-edge trigger on D0 and a pre-trigger of 10%
-- **THEN** the state is `waiting` until D0 rises, and the capture ends in `done` with 100 000 samples and the trigger at sample 10 000
+- **THEN** the state is `waiting` until D0 rises, and the capture ends in `done` with 100 000 samples and the trigger at the first rising edge of D0, preceded by up to 10 000 samples
 
 #### Scenario: sigrok-cli fails to open the device
 - **WHEN** `sigrok-cli` logs an error and exits without sending samples
