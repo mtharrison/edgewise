@@ -1,0 +1,33 @@
+# Source: reconstructed from the sigrok-cli 0.7.2 / libsigrok 0.5.2 output format (sigrok-cli -L, shortened), not captured from a run.
+sigrok-cli 0.7.2
+
+Supported hardware drivers:
+  agilent-dmm          Agilent U12xx series DMMs
+  appa-55ii            APPA 55II
+  asix-sigma           ASIX SIGMA/SIGMA2
+  beaglelogic          BeagleLogic
+  chronovu-la          ChronoVu LA8/LA16
+  demo                 Demo driver and pattern generator
+  dreamsourcelab-dslogic DreamSourceLab DSLogic
+  fx2lafw              fx2lafw (generic driver for FX2 based LAs)
+  hantek-4032l         Hantek 4032L
+  ikalogic-scanalogic2 IKALOGIC Scanalogic-2
+  ikalogic-scanaplus   IKALOGIC ScanaPLUS
+  lecroy-logicstudio   LeCroy LogicStudio
+  ols                  Openbench Logic Sniffer & SUMP compatibles
+  p-ols                Dangerous Prototypes Pipistrello OLS
+  saleae-logic16       Saleae Logic16
+  saleae-logic-pro     Saleae Logic Pro
+  sysclk-lwla          SysClk LWLA-series
+  zeroplus-logic-cube  ZEROPLUS Logic Cube LAP-C series
+
+Supported input formats:
+  binary               Raw binary logic data
+  vcd                  Value Change Dump data
+
+Supported output formats:
+  binary               Raw binary logic data
+  bits                 ASCII rendering using 0/1
+
+Supported transform modules:
+  invert               Invert values

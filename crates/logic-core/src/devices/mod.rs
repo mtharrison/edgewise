@@ -2,6 +2,7 @@
 
 pub mod demo;
 pub mod fx2lafw;
+pub mod sigrok;
 
 use serde::Serialize;
 use std::path::PathBuf;
@@ -34,18 +35,32 @@ pub trait Driver: Send {
     ) -> Result<(), String>;
 }
 
-pub fn list(fw_dirs: &[PathBuf]) -> Vec<DeviceInfo> {
+/// A device that went quiet mid-capture; `why` is an optional " (reason)".
+pub(crate) fn stall_message(samples: u64, why: &str) -> String {
+    format!(
+        "Device stopped sending after {samples} samples{why}. Captured data was kept. \
+         Try another cable or USB port, or a lower sample rate."
+    )
+}
+
+/// FX2 boards, then the devices from the last sigrok scan, then the demo device.
+pub fn list(fw_dirs: &[PathBuf], sigrok: &[sigrok::SigrokDevice]) -> Vec<DeviceInfo> {
     let mut v = fx2lafw::scan(fw_dirs);
+    v.extend(sigrok.iter().map(|d| d.info.clone()));
     v.push(demo::info());
     v
 }
 
-pub fn open(id: &str, fw_dirs: &[PathBuf]) -> Result<Box<dyn Driver>, String> {
+pub fn open(id: &str, fw_dirs: &[PathBuf], sigrok: &[sigrok::SigrokDevice]) -> Result<Box<dyn Driver>, String> {
     if id == demo::ID {
         return Ok(Box::new(demo::Demo));
     }
     if id.starts_with("fx2:") {
         return Ok(Box::new(fx2lafw::Fx2::new(id, fw_dirs.to_vec())?));
+    }
+    if id.starts_with("sigrok:") {
+        let dev = sigrok.iter().find(|d| d.info.id == id).ok_or_else(|| format!("Device {id} not found; rescan devices"))?;
+        return Ok(Box::new(sigrok::Sigrok::new(dev.clone())));
     }
     Err(format!("Unknown device {id}"))
 }
