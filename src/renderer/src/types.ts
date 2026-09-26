@@ -10,6 +10,14 @@ export interface DeviceInfo {
   missingFirmware: string | null
 }
 
+/** The `sigrok-cli` found by the last full scan, or where to download one. */
+export interface SigrokStatus {
+  found: boolean
+  path: string | null
+  version: string | null
+  download: string | null
+}
+
 export type AcqState = 'idle' | 'starting' | 'waiting' | 'running' | 'done' | 'error'
 
 export interface Status {

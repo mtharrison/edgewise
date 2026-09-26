@@ -1,7 +1,7 @@
 import { bridge, engine } from './api'
 import { fitToDevice, overlayChannels, type Saved, type SavedDecoder } from './settings'
 import { DECODER_COLORS, get, makeChannels, set, useStore } from './store'
-import type { DecoderConfig, DecoderInst, Status, TriggerCondition } from './types'
+import type { DecoderConfig, DecoderInst, DeviceInfo, Status, TriggerCondition } from './types'
 import { clampViewTo, frameRange } from './view'
 
 const TRIGGER_CYCLE: (TriggerCondition | null)[] = [null, 'rising', 'falling', 'edge', 'high', 'low']
@@ -37,8 +37,24 @@ export function restoreSettings(saved: Saved | null) {
   if (saved) set({ duration: saved.duration, pretrigger: saved.pretrigger })
 }
 
-export async function refreshDevices() {
-  const list = await engine.listDevices()
+/**
+ * Lists devices and fits the selection to them. With `rescan` it runs the full scan,
+ * including sigrok-cli, which can take seconds; a plain refresh during that scan is
+ * skipped so it cannot fit remembered settings to a list without the sigrok devices.
+ */
+export async function refreshDevices({ rescan = false } = {}) {
+  let list: DeviceInfo[]
+  if (rescan) {
+    set({ scanning: true })
+    try {
+      list = await engine.rescanDevices()
+    } finally {
+      set({ scanning: false })
+    }
+  } else {
+    if (get().scanning) return
+    list = await engine.listDevices()
+  }
   const fitted = pendingRestore && fitToDevice(pendingRestore, list)
   pendingRestore = null
   if (fitted) {

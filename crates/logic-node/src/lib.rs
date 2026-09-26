@@ -6,6 +6,7 @@ use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 fn err(e: impl std::fmt::Display) -> Error {
     Error::from_reason(e.to_string())
@@ -19,16 +20,33 @@ fn from_json<T: serde::de::DeserializeOwned>(v: Value) -> Result<T> {
     serde_json::from_value(v).map_err(err)
 }
 
+pub struct Rescan {
+    engine: Arc<engine::Engine>,
+}
+
+impl Task for Rescan {
+    type Output = Vec<logic_core::devices::DeviceInfo>;
+    type JsValue = napi::JsUnknown;
+
+    fn compute(&mut self) -> Result<Self::Output> {
+        Ok(self.engine.rescan_devices())
+    }
+
+    fn resolve(&mut self, env: Env, output: Self::Output) -> Result<Self::JsValue> {
+        env.to_js_value(&output)
+    }
+}
+
 #[napi]
 pub struct Engine {
-    inner: engine::Engine,
+    inner: Arc<engine::Engine>,
 }
 
 #[napi]
 impl Engine {
     #[napi(constructor)]
     pub fn new() -> Self {
-        Engine { inner: engine::Engine::new() }
+        Engine { inner: Arc::new(engine::Engine::new()) }
     }
 
     #[napi]
@@ -37,8 +55,24 @@ impl Engine {
     }
 
     #[napi]
+    pub fn set_sigrok_path(&self, path: Option<String>) {
+        self.inner.set_sigrok_path(path.map(PathBuf::from));
+    }
+
+    #[napi]
     pub fn list_devices(&self) -> Result<Value> {
         to_json(self.inner.list_devices())
+    }
+
+    /// Full scan including sigrok-cli, off the main thread; resolves with the device list.
+    #[napi(ts_return_type = "Promise<unknown>")]
+    pub fn rescan_devices(&self) -> AsyncTask<Rescan> {
+        AsyncTask::new(Rescan { engine: self.inner.clone() })
+    }
+
+    #[napi]
+    pub fn sigrok_status(&self) -> Result<Value> {
+        to_json(self.inner.sigrok_status())
     }
 
     #[napi]
