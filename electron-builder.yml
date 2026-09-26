@@ -1,0 +1,22 @@
+# Packaging for `npm run package`. The main process loads the Rust addon from
+# process.resourcesPath/native and firmware from process.resourcesPath/firmware.
+appId: com.edgewise.app
+productName: Edgewise
+directories:
+  output: dist
+files:
+  - out/**
+extraResources:
+  - from: native
+    to: native
+    filter: ['*.node']
+npmRebuild: false
+artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+mac:
+  target: dmg
+  category: public.app-category.developer-tools
+linux:
+  target: [AppImage, deb]
+  category: Development
+win:
+  target: nsis
