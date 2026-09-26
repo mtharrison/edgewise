@@ -51,6 +51,7 @@ jobs:
             Run the backlog-pickup skill, Phase 1 only, on issue #${{ github.event.issue.number }} in ${{ github.repository }}.
             You are running in CI, so:
             - Assign the issue to ${{ github.repository_owner }}, not @me.
+            - Skip the board checks and the board Status edit; your token cannot reach the user project, and Board sync handles Status.
             - If any check fails, comment on the issue saying which one, then stop.
             Stop after opening the draft PR. Do not implement.
           claude_args: >-

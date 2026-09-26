@@ -10,8 +10,8 @@ context: |
   screenshots and GIFs so the PR description can embed them.
   Hardware: FX2 boards running sigrok's fx2lafw firmware, plus a built-in demo device.
 
-  Workflow (see openspec/specs/dev-workflow/spec.md): the backlog is a Linear team synced
-  two-way with this repo's GitHub issues. Epics map one-to-one to spec
+  Workflow (see openspec/specs/dev-workflow/spec.md): the backlog is the GitHub Projects
+  board https://github.com/users/mtharrison/projects/3. Epics map one-to-one to spec
   capabilities. Each Ready issue becomes one change named `<issue-number>-<slug>`,
   delivered in one PR that closes the issue. Implementation starts only after a
   maintainer applies `spec-approved`. The change is archived in the same PR, before merge.
