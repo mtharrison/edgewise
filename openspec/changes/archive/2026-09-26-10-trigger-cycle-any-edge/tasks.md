@@ -15,6 +15,6 @@
 
 ## 3. Verify and archive
 
-- [ ] 3.1 Run `npm test` and `npm run typecheck` and confirm both pass
-- [ ] 3.2 Run the `openspec-verify-change` skill against `10-trigger-cycle-any-edge` and resolve anything it flags
-- [ ] 3.3 Run the `openspec-archive-change` skill to archive the change and update `openspec/specs/trigger/spec.md`
+- [x] 3.1 Run `npm test` and `npm run typecheck` and confirm both pass
+- [x] 3.2 Run the `openspec-verify-change` skill against `10-trigger-cycle-any-edge` and resolve anything it flags
+- [x] 3.3 Run the `openspec-archive-change` skill to archive the change and update `openspec/specs/trigger/spec.md`
