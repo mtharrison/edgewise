@@ -16,6 +16,7 @@ pub fn info() -> DeviceInfo {
         samplerates: vec![4_000_000, 8_000_000, 10_000_000, 20_000_000, 25_000_000, 50_000_000, 100_000_000],
         default_samplerate: 20_000_000,
         note: Some("UART D0 · I²C D1/D2 · SPI D3–D6 · PWM D7".into()),
+        missing_firmware: None,
     }
 }
 
