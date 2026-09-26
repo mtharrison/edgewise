@@ -37,7 +37,7 @@ jobs:
       # Done here rather than via CSC_LINK: electron-builder unlocks its temporary
       # keychain with the certificate password, which macOS 26 rejects.
       - name: Import signing certificate
-        if: runner.os == 'macOS' && secrets.CSC_LINK != ''
+        if: runner.os == 'macOS' && env.CSC_LINK != ''
         env:
           # Developer ID Application certificate (base64 .p12) and its password.
           CSC_LINK: ${{ secrets.CSC_LINK }}
