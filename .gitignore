@@ -8,3 +8,6 @@ native/*.node
 !.claude/
 .claude/settings.local.json
 ui-checks/
+
+# Packaging resources (overrides a global ignore)
+!build/
