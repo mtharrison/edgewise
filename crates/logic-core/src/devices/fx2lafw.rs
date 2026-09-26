@@ -75,6 +75,12 @@ fn find_firmware(dirs: &[PathBuf], name: &str) -> Option<PathBuf> {
     dirs.iter().map(|d| d.join(name)).find(|p| p.is_file())
 }
 
+fn missing_firmware_message(file: &str) -> String {
+    format!(
+        "Firmware {file} not found. Download sigrok-firmware-fx2lafw and copy the .fw files into the folder opened by File → Open Firmware Folder."
+    )
+}
+
 pub fn scan(fw_dirs: &[PathBuf]) -> Vec<DeviceInfo> {
     let Ok(list) = nusb::list_devices() else { return vec![] };
     list.filter_map(|d| {
@@ -138,12 +144,8 @@ impl Fx2 {
     }
 
     fn upload_firmware(&self, dev: &nusb::Device) -> Result<(), String> {
-        let path = find_firmware(&self.fw_dirs, self.profile.firmware).ok_or_else(|| {
-            format!(
-                "Firmware {} not found. Download sigrok-firmware-fx2lafw and copy the .fw files into a firmware folder (see Settings).",
-                self.profile.firmware
-            )
-        })?;
+        let path = find_firmware(&self.fw_dirs, self.profile.firmware)
+            .ok_or_else(|| missing_firmware_message(self.profile.firmware))?;
         let image = std::fs::read(&path).map_err(|e| format!("Reading {}: {e}", path.display()))?;
         let t = Duration::from_millis(1000);
         let write = |addr: u16, data: &[u8]| {
@@ -365,5 +367,13 @@ mod tests {
         // 48 MHz / 20 kHz - 1 = 2399 > MAX, so the 30 MHz clock is used.
         assert_eq!(start_command(20_000, false).unwrap(), [0, (1499u32 >> 8) as u8, 1499u32 as u8]);
         assert!(start_command(7_000_000, false).is_err());
+    }
+
+    #[test]
+    fn missing_firmware_message_points_to_firmware_folder_menu() {
+        let msg = missing_firmware_message("fx2lafw-saleae-logic.fw");
+        assert!(msg.contains("fx2lafw-saleae-logic.fw"));
+        assert!(msg.contains("File → Open Firmware Folder"));
+        assert!(!msg.contains("Settings"));
     }
 }
