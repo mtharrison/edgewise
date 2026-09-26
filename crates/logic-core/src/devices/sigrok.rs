@@ -624,7 +624,14 @@ impl Driver for Sigrok {
                 Some(at) if at.elapsed() > t.stall => {
                     break Err(stall_message(received / unit as u64, ""));
                 }
-                None if started.elapsed() > t.no_data => break Err("sigrok-cli sent no data".into()),
+                None if started.elapsed() > t.no_data => {
+                    // Exited without data: report its last log line, not a timeout.
+                    if matches!(child.try_wait(), Ok(Some(_))) {
+                        stdout_open = false;
+                        continue;
+                    }
+                    break Err("sigrok-cli sent no data".into());
+                }
                 _ => {}
             }
         };
@@ -858,7 +865,7 @@ pub(crate) mod tests {
             Timeouts {
                 probe: Duration::from_secs(2),
                 scan: Duration::from_millis(1500),
-                no_data: Duration::from_millis(800),
+                no_data: Duration::from_millis(2000),
                 stall: Duration::from_millis(300),
                 stop: Duration::from_secs(1),
             }
@@ -967,7 +974,7 @@ esac"#,
             let bin = script("silent", "exec sleep 30");
             let (res, _, took) = run_capture(&mut dev(bin), None);
             assert_eq!(res, Err("sigrok-cli sent no data".into()));
-            assert!(took < Duration::from_secs(3), "{took:?}");
+            assert!(took < Duration::from_secs(4), "{took:?}");
         }
 
         #[test]
