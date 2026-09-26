@@ -5,6 +5,7 @@ interface Bridge {
   openDialog: () => Promise<string | null>
   saveDialog: (kind: 'sr' | 'vcd') => Promise<string | null>
   openFirmwareFolder: () => Promise<void>
+  chooseFirmware: (file: string) => Promise<boolean>
   onMenu: (cb: (cmd: string) => void) => () => void
   platform: string
 }

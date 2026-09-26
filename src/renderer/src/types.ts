@@ -6,6 +6,8 @@ export interface DeviceInfo {
   samplerates: number[]
   defaultSamplerate: number
   note: string | null
+  /** Firmware file a bare FX2 board needs that no firmware folder has. */
+  missingFirmware: string | null
 }
 
 export type AcqState = 'idle' | 'starting' | 'waiting' | 'running' | 'done' | 'error'

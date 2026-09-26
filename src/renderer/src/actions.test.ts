@@ -2,9 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DeviceInfo, Status } from './types'
 
 vi.mock('./api', () => ({
-  bridge: {},
+  bridge: { chooseFirmware: vi.fn() },
   engine: {
     listDevices: vi.fn(),
+    start: vi.fn(),
     addDecoder: vi.fn(),
     decoderRows: vi.fn(),
     decode: vi.fn(),
@@ -13,7 +14,7 @@ vi.mock('./api', () => ({
   }
 }))
 
-import { engine } from './api'
+import { bridge, engine } from './api'
 import {
   addDecoder,
   cycleTrigger,
@@ -25,6 +26,7 @@ import {
   sameFx2Model,
   selectDevice,
   setTrigger,
+  startCapture,
   updateChannel
 } from './actions'
 import { toSaved } from './settings'
@@ -39,6 +41,7 @@ function device(id: string, overrides: Partial<DeviceInfo> = {}): DeviceInfo {
     samplerates: [20_000_000],
     defaultSamplerate: 20_000_000,
     note: null,
+    missingFirmware: null,
     ...overrides
   }
 }
@@ -299,5 +302,47 @@ describe('resetSettings', () => {
 
     expect(useStore.getState()).toBe(before)
     expect(engine.removeDecoder).not.toHaveBeenCalled()
+  })
+})
+
+describe('startCapture missing firmware', () => {
+  const bare = device(boardOnPortA.id, { missingFirmware: 'fx2lafw-saleae-logic.fw' })
+
+  beforeEach(async () => {
+    vi.mocked(bridge.chooseFirmware).mockReset()
+    vi.mocked(engine.start).mockReset()
+    vi.mocked(engine.status).mockResolvedValue(status())
+    vi.mocked(engine.listDevices).mockResolvedValueOnce([bare, demo])
+    await refreshDevices()
+  })
+
+  it('asks for the firmware folder, re-lists devices, then starts', async () => {
+    vi.mocked(bridge.chooseFirmware).mockResolvedValueOnce(true)
+    vi.mocked(engine.listDevices).mockResolvedValueOnce([boardOnPortA, demo])
+
+    await startCapture()
+
+    expect(bridge.chooseFirmware).toHaveBeenCalledWith('fx2lafw-saleae-logic.fw')
+    expect(useStore.getState().devices[0].missingFirmware).toBeNull()
+    expect(engine.start).toHaveBeenCalledOnce()
+    expect(vi.mocked(engine.start).mock.calls[0][0].deviceId).toBe(boardOnPortA.id)
+  })
+
+  it('does not start when the dialog is cancelled', async () => {
+    vi.mocked(bridge.chooseFirmware).mockResolvedValueOnce(false)
+
+    await startCapture()
+
+    expect(engine.start).not.toHaveBeenCalled()
+    expect(useStore.getState().toast).toBeNull()
+  })
+
+  it('starts without asking when no firmware is missing', async () => {
+    selectDevice(demo.id)
+
+    await startCapture()
+
+    expect(bridge.chooseFirmware).not.toHaveBeenCalled()
+    expect(engine.start).toHaveBeenCalledOnce()
   })
 })

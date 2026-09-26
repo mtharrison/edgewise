@@ -101,8 +101,14 @@ export async function startCapture() {
   const trigger = channels
     .filter((c) => c.trigger)
     .map((c) => ({ channel: c.index, condition: c.trigger as string }))
-  set({ follow: true, markers: { a: null, b: null }, measurement: null })
   try {
+    // A bare board without its firmware file can't start; ask for the folder first.
+    const missing = get().devices.find((d) => d.id === deviceId)?.missingFirmware
+    if (missing) {
+      if (!(await bridge.chooseFirmware(missing))) return
+      await refreshDevices()
+    }
+    set({ follow: true, markers: { a: null, b: null }, measurement: null })
     await engine.start({
       deviceId,
       samplerate,

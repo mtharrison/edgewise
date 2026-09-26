@@ -75,18 +75,28 @@ fn find_firmware(dirs: &[PathBuf], name: &str) -> Option<PathBuf> {
     dirs.iter().map(|d| d.join(name)).find(|p| p.is_file())
 }
 
+/// Fallback only: the UI offers to choose a firmware folder before starting,
+/// so this shows just if the file disappeared after the device list.
+fn missing_firmware_message(file: &str) -> String {
+    format!("Firmware {file} not found.")
+}
+
+/// Device-list note and missing firmware file for a board.
+fn readiness(loaded: bool, fw_dirs: &[PathBuf], file: &str) -> (Option<String>, Option<String>) {
+    if loaded {
+        (None, None)
+    } else if find_firmware(fw_dirs, file).is_some() {
+        (Some("Firmware will be uploaded on first capture".into()), None)
+    } else {
+        (Some(format!("Needs {file} in a firmware folder")), Some(file.into()))
+    }
+}
+
 pub fn scan(fw_dirs: &[PathBuf]) -> Vec<DeviceInfo> {
     let Ok(list) = nusb::list_devices() else { return vec![] };
     list.filter_map(|d| {
         let p = profile_of(&d)?;
-        let loaded = has_fx2lafw_strings(&d);
-        let note = if loaded {
-            None
-        } else if find_firmware(fw_dirs, p.firmware).is_some() {
-            Some("Firmware will be uploaded on first capture".into())
-        } else {
-            Some(format!("Needs {} in a firmware folder", p.firmware))
-        };
+        let (note, missing_firmware) = readiness(has_fx2lafw_strings(&d), fw_dirs, p.firmware);
         Some(DeviceInfo {
             id: format!("fx2:{:04x}:{:04x}:{:x}", p.vid, p.pid, port_key(&d)),
             name: p.name.into(),
@@ -95,6 +105,7 @@ pub fn scan(fw_dirs: &[PathBuf]) -> Vec<DeviceInfo> {
             samplerates: SAMPLERATES.to_vec(),
             default_samplerate: 24_000_000,
             note,
+            missing_firmware,
         })
     })
     .collect()
@@ -138,12 +149,8 @@ impl Fx2 {
     }
 
     fn upload_firmware(&self, dev: &nusb::Device) -> Result<(), String> {
-        let path = find_firmware(&self.fw_dirs, self.profile.firmware).ok_or_else(|| {
-            format!(
-                "Firmware {} not found. Download sigrok-firmware-fx2lafw and copy the .fw files into a firmware folder (see Settings).",
-                self.profile.firmware
-            )
-        })?;
+        let path = find_firmware(&self.fw_dirs, self.profile.firmware)
+            .ok_or_else(|| missing_firmware_message(self.profile.firmware))?;
         let image = std::fs::read(&path).map_err(|e| format!("Reading {}: {e}", path.display()))?;
         let t = Duration::from_millis(1000);
         let write = |addr: u16, data: &[u8]| {
@@ -365,5 +372,27 @@ mod tests {
         // 48 MHz / 20 kHz - 1 = 2399 > MAX, so the 30 MHz clock is used.
         assert_eq!(start_command(20_000, false).unwrap(), [0, (1499u32 >> 8) as u8, 1499u32 as u8]);
         assert!(start_command(7_000_000, false).is_err());
+    }
+
+    #[test]
+    fn missing_firmware_message_names_the_file() {
+        let msg = missing_firmware_message("fx2lafw-saleae-logic.fw");
+        assert_eq!(msg, "Firmware fx2lafw-saleae-logic.fw not found.");
+    }
+
+    #[test]
+    fn readiness_reports_missing_firmware() {
+        let dir = std::env::temp_dir().join(format!("edgewise-fw-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("present.fw"), b"").unwrap();
+        let dirs = [dir.clone()];
+
+        assert_eq!(readiness(true, &dirs, "absent.fw"), (None, None));
+        assert_eq!(readiness(false, &dirs, "present.fw"), (Some("Firmware will be uploaded on first capture".into()), None));
+        assert_eq!(
+            readiness(false, &dirs, "absent.fw"),
+            (Some("Needs absent.fw in a firmware folder".into()), Some("absent.fw".into()))
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }

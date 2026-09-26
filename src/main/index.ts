@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron'
 import { createRequire } from 'module'
-import { existsSync, mkdirSync, readdirSync } from 'fs'
+import { copyFileSync, existsSync, mkdirSync, readdirSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
 
@@ -40,6 +40,38 @@ function firmwareDirs(): string[] {
 }
 
 let win: BrowserWindow | null = null
+
+/**
+ * Asks for a folder holding the missing firmware `file` and copies its `.fw` files
+ * into the user firmware folder, so later launches find them too. Resolves false if
+ * the user cancels.
+ */
+async function chooseFirmware(file: string): Promise<boolean> {
+  let detail = 'Download sigrok-firmware-fx2lafw, then choose the folder that contains the .fw files.'
+  for (;;) {
+    const r = await dialog.showMessageBox(win!, {
+      type: 'warning',
+      message: `Firmware ${file} not found`,
+      detail,
+      buttons: ['Choose Folder…', 'Cancel'],
+      defaultId: 0,
+      cancelId: 1
+    })
+    if (r.response !== 0) return false
+    const pick = await dialog.showOpenDialog(win!, { properties: ['openDirectory'] })
+    if (pick.canceled || !pick.filePaths[0]) return false
+    const dir = pick.filePaths[0]
+    if (!existsSync(join(dir, file))) {
+      detail = `${dir} doesn't contain ${file}. Choose the folder from sigrok-firmware-fx2lafw that contains the .fw files.`
+      continue
+    }
+    for (const f of readdirSync(dir)) {
+      if (f.endsWith('.fw')) copyFileSync(join(dir, f), join(userFirmwareDir, f))
+    }
+    engine.setFirmwareDirs(firmwareDirs())
+    return true
+  }
+}
 
 function send(cmd: string) {
   win?.webContents.send('menu', cmd)
@@ -118,6 +150,7 @@ app.whenReady().then(() => {
     return r.canceled ? null : r.filePath
   })
   ipcMain.handle('firmware:open', () => shell.openPath(userFirmwareDir))
+  ipcMain.handle('firmware:missing', (_e, file: string) => chooseFirmware(file))
 
   buildMenu()
   createWindow()

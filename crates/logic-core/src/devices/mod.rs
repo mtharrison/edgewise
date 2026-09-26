@@ -18,6 +18,8 @@ pub struct DeviceInfo {
     pub default_samplerate: u64,
     /// Human-readable note, e.g. "firmware will be uploaded".
     pub note: Option<String>,
+    /// Firmware file the board needs but none of the firmware folders has.
+    pub missing_firmware: Option<String>,
 }
 
 pub trait Driver: Send {
