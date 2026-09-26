@@ -11,10 +11,16 @@ extraResources:
     to: native
     filter: ['*.node']
 npmRebuild: false
+afterPack: scripts/after-pack.mjs
 artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 mac:
   target: dmg
   category: public.app-category.developer-tools
+  # Signed and notarized when the release workflow has the Apple secrets;
+  # ad-hoc signed by scripts/after-pack.mjs otherwise.
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  notarize: true
 linux:
   target: [AppImage, deb]
   category: Development

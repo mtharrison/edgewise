@@ -47,6 +47,17 @@ const MAX_SAMPLE_DELAY: u32 = 6 * 256;
 const EP_IN: u8 = 0x82;
 const CPUCS: u16 = 0xe600;
 
+/// Handle for blocking control transfers on the default endpoint. nusb offers
+/// them on the device on Unix; WinUSB needs a claimed interface.
+#[cfg(not(windows))]
+fn control_handle(dev: &nusb::Device) -> Result<nusb::Device, nusb::Error> {
+    Ok(dev.clone())
+}
+#[cfg(windows)]
+fn control_handle(dev: &nusb::Device) -> Result<nusb::Interface, nusb::Error> {
+    dev.claim_interface(0)
+}
+
 fn vendor() -> Control {
     Control { control_type: ControlType::Vendor, recipient: Recipient::Device, request: 0, value: 0, index: 0 }
 }
@@ -142,7 +153,7 @@ impl Fx2 {
     fn fw_version(dev: &nusb::Device) -> Option<(u8, u8)> {
         let mut buf = [0u8; 2];
         let ctl = Control { request: CMD_GET_FW_VERSION, ..vendor() };
-        match dev.control_in_blocking(ctl, &mut buf, Duration::from_millis(300)) {
+        match control_handle(dev).ok()?.control_in_blocking(ctl, &mut buf, Duration::from_millis(300)) {
             Ok(2) => Some((buf[0], buf[1])),
             _ => None,
         }
@@ -153,8 +164,9 @@ impl Fx2 {
             .ok_or_else(|| missing_firmware_message(self.profile.firmware))?;
         let image = std::fs::read(&path).map_err(|e| format!("Reading {}: {e}", path.display()))?;
         let t = Duration::from_millis(1000);
+        let h = control_handle(dev).map_err(|e| format!("Claiming interface for firmware upload: {e}"))?;
         let write = |addr: u16, data: &[u8]| {
-            dev.control_out_blocking(Control { request: 0xa0, value: addr, ..vendor() }, data, t)
+            h.control_out_blocking(Control { request: 0xa0, value: addr, ..vendor() }, data, t)
                 .map_err(|e| format!("Firmware upload failed at 0x{addr:04x}: {e}"))
         };
         write(CPUCS, &[1])?; // hold 8051 in reset
