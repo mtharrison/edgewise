@@ -37,6 +37,7 @@ const ALLOWED: &[&str] = &[
     "p-ols",
     "saleae-logic16",
     "saleae-logic-pro",
+    "sipeed-slogic-analyzer",
     "sysclk-lwla",
     "zeroplus-logic-cube",
 ];
