@@ -14,7 +14,8 @@
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit",
     "test": "cargo test --release -p logic-core && vitest run",
-    "package": "npm run build && electron-builder --publish never"
+    "package": "npm run build && electron-builder --publish never",
+    "pr": "bash scripts/pr-run.sh"
   },
   "dependencies": {
     "lucide-react": "^1.47.0",
