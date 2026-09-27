@@ -83,5 +83,5 @@ Start only when asked to continue an item, or when re-run and a draft PR you ope
 ## If something goes wrong
 
 - A check fails in Phase 1 → skip the item, say why, try the next one.
-- Specs turn out wrong during Phase 2 → update the artifacts on the PR, comment explaining what changed, and ask for approval again (the maintainer re-applies `spec-approved`).
+- Specs turn out wrong during Phase 2 → update the artifacts on the PR, comment explaining what changed, and ask for approval again. The label is still on the PR, so the maintainer removes `spec-approved` and adds it back, which starts Auto build.
 - CI fails → fix on the branch. Never bypass checks.

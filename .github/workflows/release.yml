@@ -1,6 +1,7 @@
 # Builds installers for every platform and attaches them to a GitHub release.
 # Push a tag matching package.json's version (`git tag v0.1.0 && git push --tags`)
-# to release. Run it by hand to get unsigned test installers as workflow artifacts.
+# to release. Run it by hand to get test installers as workflow artifacts; the
+# macOS ones are still signed and notarized while the Apple secrets are set.
 
 name: Release
 
