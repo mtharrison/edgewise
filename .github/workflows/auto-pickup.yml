@@ -1,5 +1,6 @@
-# Runs backlog-pickup Phase 1 when a collaborator labels an issue `ready`:
-# claim, propose, open a draft PR, stop. Auto build runs Phase 2.
+# Runs backlog-pickup Phase 1 when a collaborator labels an issue `ready`, on
+# GitHub or in Linear (Linear applies labels under the member's own GitHub
+# account): claim, propose, open a draft PR, stop. Auto build runs Phase 2.
 
 name: Auto pickup
 
@@ -40,6 +41,19 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup
 
+      # Looked up here so the agent, which reads untrusted issue text, never holds
+      # the key. The ID is empty without LINEAR_API_KEY; a failed lookup doesn't
+      # stop the pickup, the PR just isn't linked in Linear until it merges.
+      - name: Look up the Linear issue
+        id: linear
+        continue-on-error: true
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+          N: ${{ github.event.issue.number }}
+        run: |
+          id=$(scripts/linear-id.sh "$N")
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -47,7 +61,7 @@ jobs:
             Run the backlog-pickup skill, Phase 1 only, on issue #${{ github.event.issue.number }} in ${{ github.repository }}.
             You are running in CI, so:
             - Assign the issue to ${{ github.event.sender.login }}, not @me.
-            - Skip the board checks and the board Status edit; your token cannot reach the user project, and Board sync handles Status.
+            - The issue's Linear ID is "${{ steps.linear.outputs.id }}" (empty if unknown). Use it; don't run scripts/linear-id.sh.
             - If any check fails, comment on the issue saying which one, then stop.
             Stop after opening the draft PR. Do not implement.
           claude_args: >-
