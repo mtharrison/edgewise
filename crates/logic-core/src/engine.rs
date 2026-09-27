@@ -5,7 +5,7 @@
 use crate::capture::{Capture, Snapshot};
 use crate::decoders::{self, Annotation, DecoderConfig};
 use crate::devices::{self, sigrok};
-use crate::trigger::{Feeder, TriggerTerm};
+use crate::trigger::{pretrigger_samples, Feeder, TriggerTerm};
 use parking_lot::{Mutex, RwLock};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -26,6 +26,9 @@ pub struct StartOptions {
     pub trigger: Vec<TriggerTerm>,
     #[serde(default = "default_pre")]
     pub pretrigger: f64,
+    /// Seconds kept before the trigger when `sample_limit` is 0.
+    #[serde(default = "default_pre")]
+    pub pretrigger_time: f64,
 }
 
 fn default_pre() -> f64 {
@@ -56,6 +59,8 @@ pub struct Status {
     pub capture_id: u64,
     pub decoding: bool,
     pub decode_gen: u64,
+    /// Seconds kept before the trigger when the memory cap cut the pre-trigger time short.
+    pub pretrigger_kept: Option<f64>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -176,6 +181,7 @@ impl Engine {
             let mut st = self.status.lock();
             st.state = AcqState::Starting;
             st.message.clear();
+            st.pretrigger_kept = None;
         }
         let stop = Arc::new(AtomicBool::new(false));
         let status = self.status.clone();
@@ -184,7 +190,9 @@ impl Engine {
             .name("acquisition".into())
             .spawn(move || {
                 let unit = if channels > 8 { 2 } else { 1 };
-                let mut feeder = Feeder::new(cap, unit, opts.sample_limit, &opts.trigger, opts.pretrigger);
+                let (pre_samples, capped) = pretrigger_samples(opts.pretrigger_time, opts.samplerate, unit);
+                let capped = capped && opts.sample_limit == 0;
+                let mut feeder = Feeder::new(cap, unit, opts.sample_limit, &opts.trigger, opts.pretrigger, pre_samples);
                 let mut announced = false;
                 let mut sink = |d: &[u8]| {
                     if !announced {
@@ -194,7 +202,12 @@ impl Engine {
                     let was_armed = feeder.armed();
                     let more = feeder.push(d);
                     if was_armed && !feeder.armed() {
-                        status.lock().state = AcqState::Running;
+                        let mut st = status.lock();
+                        st.state = AcqState::Running;
+                        // Only a full ring was cut by the cap; a shorter one holds all there was.
+                        if capped && feeder.trigger_at() == Some(pre_samples) {
+                            st.pretrigger_kept = Some(pre_samples as f64 / opts.samplerate as f64);
+                        }
                     }
                     more
                 };
@@ -272,6 +285,7 @@ impl Engine {
         let mut st = self.status.lock();
         st.state = AcqState::Done;
         st.message.clear();
+        st.pretrigger_kept = None;
         Ok(names)
     }
 
@@ -370,6 +384,37 @@ mod tests {
             }
             std::thread::sleep(Duration::from_millis(20));
         }
+    }
+
+    #[test]
+    fn pretrigger_time_defaults_to_100_ms() {
+        let opts: StartOptions = serde_json::from_str(r#"{"deviceId":"demo","samplerate":1000000}"#).unwrap();
+        assert_eq!((opts.pretrigger, opts.pretrigger_time), (0.1, 0.1));
+        let opts: StartOptions = serde_json::from_str(r#"{"deviceId":"demo","samplerate":1000000,"pretriggerTime":0.25}"#).unwrap();
+        assert_eq!(opts.pretrigger_time, 0.25);
+    }
+
+    #[test]
+    fn until_stopped_keeps_the_pretrigger_time() {
+        let e = Engine::new();
+        // D5 high as D6 rises first happens 16 ms into the demo's loop, so a 10 ms ring is full.
+        let trigger = serde_json::from_str(r#"[{"channel":5,"condition":"high"},{"channel":6,"condition":"rising"}]"#).unwrap();
+        let opts = StartOptions {
+            device_id: devices::demo::ID.into(),
+            samplerate: 4_000_000,
+            sample_limit: 0,
+            trigger,
+            pretrigger: 0.5,
+            pretrigger_time: 0.01,
+        };
+        e.start(opts).unwrap();
+        let t0 = Instant::now();
+        while e.status().trigger.is_none() && t0.elapsed() < Duration::from_secs(5) {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        e.stop();
+        let st = e.status();
+        assert_eq!((st.trigger, st.pretrigger_kept), (Some(40_000), None), "{}", st.message);
     }
 
     #[test]
@@ -475,6 +520,7 @@ esac"#,
             sample_limit: 100_000,
             trigger: vec![],
             pretrigger: 0.1,
+            pretrigger_time: 0.1,
         };
         e.start(opts).unwrap();
         let st = wait_done(&e, Duration::from_secs(15));
@@ -491,6 +537,7 @@ esac"#,
             sample_limit: 100_000,
             trigger,
             pretrigger: 0.1,
+            pretrigger_time: 0.1,
         };
         e.start(opts).unwrap();
         let st = wait_done(&e, Duration::from_secs(15));
@@ -512,6 +559,7 @@ esac"#,
             sample_limit: 0,
             trigger: vec![],
             pretrigger: 0.1,
+            pretrigger_time: 0.1,
         };
         e.start(opts).unwrap();
         std::thread::sleep(Duration::from_millis(1500));

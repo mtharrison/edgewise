@@ -2,9 +2,9 @@
 
 ## 1. Engine: pre-trigger time with a memory cap
 
-- [ ] 1.1 Add a pure `pretrigger_samples(time, samplerate, unit)` in `crates/logic-core/src/trigger.rs` that clamps `time` to 0–1 s and applies a 64 MiB cap, returning the sample count and whether it was capped; add Rust unit tests for 100 ms at 1 MHz and 24 MHz (no cap), 0 s, over 1 s (clamped), and a rate/width that hits the cap
-- [ ] 1.2 Let `Feeder::new` take the pre-trigger sample count for `limit == 0` instead of the flat 1,000,000, and add a Rust unit test: no limit, 100 ms at a small rate, trigger after more than 100 ms of data, trigger position equals the 100 ms sample count
-- [ ] 1.3 Add `pretrigger_time` to `StartOptions` (serde default 0.1) and `pretrigger_kept: Option<f64>` to `Status` in `engine.rs`; in `Engine::start`, size the feeder from it when `sample_limit == 0`, clear `pretrigger_kept` on start and set it when a capped capture triggers; add a unit test that `StartOptions` without `pretriggerTime` deserialises to 0.1, and check `npm test` passes (existing `real_sigrok_demo_*` tests included)
+- [x] 1.1 Add a pure `pretrigger_samples(time, samplerate, unit)` in `crates/logic-core/src/trigger.rs` that clamps `time` to 0–1 s and applies a 64 MiB cap, returning the sample count and whether it was capped; add Rust unit tests for 100 ms at 1 MHz and 24 MHz (no cap), 0 s, over 1 s (clamped), and a rate/width that hits the cap
+- [x] 1.2 Let `Feeder::new` take the pre-trigger sample count for `limit == 0` instead of the flat 1,000,000, and add a Rust unit test: no limit, 100 ms at a small rate, trigger after more than 100 ms of data, trigger position equals the 100 ms sample count
+- [x] 1.3 Add `pretrigger_time` to `StartOptions` (serde default 0.1) and `pretrigger_kept: Option<f64>` to `Status` in `engine.rs`; in `Engine::start`, size the feeder from it when `sample_limit == 0`, clear `pretrigger_kept` on start and set it when a capped capture triggers; add a unit test that `StartOptions` without `pretriggerTime` deserialises to 0.1, and check `npm test` passes (existing `real_sigrok_demo_*` tests included)
 
 ## 2. Renderer: separate setting, sent and remembered
 
