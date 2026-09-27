@@ -11,6 +11,7 @@ export function TopBar() {
   const devices = useStore((s) => s.devices)
   const deviceId = useStore((s) => s.deviceId)
   const deviceConnected = useStore((s) => s.deviceConnected)
+  const scanning = useStore((s) => s.scanning)
   const samplerate = useStore((s) => s.samplerate)
   const duration = useStore((s) => s.duration)
   const status = useStore((s) => s.status)
@@ -32,11 +33,17 @@ export function TopBar() {
               {devices.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
+                  {d.driver === 'sigrok' ? ' via sigrok-cli' : ''}
                   {d.id === deviceId && !deviceConnected ? ' (disconnected)' : ''}
                 </option>
               ))}
             </select>
-            <button className="icon-btn" title="Rescan devices" onClick={refreshDevices} disabled={busy}>
+            <button
+              className="icon-btn"
+              title={scanning ? 'Scanning for devices…' : 'Rescan devices'}
+              onClick={() => refreshDevices({ rescan: true })}
+              disabled={busy || scanning}
+            >
               <RefreshCw size={14} />
             </button>
           </div>

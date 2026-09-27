@@ -1,0 +1,28 @@
+# Source: reconstructed from the sigrok-cli 0.7.2 / libsigrok 0.5.2 output format (sigrok-cli -d dreamsourcelab-dslogic:conn=1.7 --show), not captured from a board.
+Driver functions:
+    Logic analyzer
+dreamsourcelab-dslogic:conn=1.7 - DreamSourceLab DSLogic Plus with 16 channels: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
+Supported configuration options:
+    continuous: on, off
+    limit_samples: 0 (current)
+    samplerate - supported samplerates:
+      10 kHz
+      20 kHz
+      50 kHz
+      100 kHz
+      200 kHz
+      500 kHz
+      1 MHz
+      2 MHz
+      5 MHz
+      10 MHz
+      20 MHz
+      25 MHz
+      50 MHz
+      100 MHz (current)
+      200 MHz
+      400 MHz
+    voltage_threshold: 0.000000-5.000000 (current)
+    external_clock: on, off (current)
+    clock_edge: rising (current), falling
+    Supported triggers: 0 1 r f e

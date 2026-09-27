@@ -26,7 +26,7 @@ npm test         # Rust unit tests
 
 To try a pull request without disturbing your checkout, `scripts/pr-run.sh 41` checks it out in a sibling worktree and launches it.
 
-`node scripts/ui.mjs [check.mjs]` builds and launches the app under Playwright, runs each check script against it, and saves screenshots and GIFs to `ui-checks/`. CI and the agent workflows use it to see the app running; the script header gives the API. `scripts/pr-media.sh <PR> <files>` publishes those files to the `pr-media` branch and prints Markdown to embed them in the PR.
+`node scripts/ui.mjs [check.mjs]` builds and launches the app under Playwright, runs each check script against it, and saves screenshots to `ui-checks/`. CI and the agent workflows use it to see the app running; the script header gives the API.
 
 Needs Rust (rustup) and Node 20+.
 
@@ -40,6 +40,8 @@ Needs Rust (rustup) and Node 20+.
 ## Hardware
 
 FX2-based boards running sigrok's `fx2lafw` firmware. If the board has no firmware yet, Edgewise uploads it. It looks for the `.fw` files in the app's firmware folder (File → Open Firmware Folder), in installed PulseView bundles, and in the usual `sigrok-firmware` locations.
+
+With [sigrok-cli](https://sigrok.org/wiki/Downloads) installed, Edgewise also lists the logic analyzers it finds through sigrok's own drivers (DSLogic, Kingst, OLS, Sipeed SLogic and others) and captures through `sigrok-cli`. An FX2 board is offered both ways, "via sigrok-cli" in the picker, so the two paths can be compared.
 
 ## License
 

@@ -2,7 +2,9 @@
 
 ## Purpose
 Runs a capture from a selected device into memory, reports its progress and state, and keeps whatever data was captured when a device fails.
+
 ## Requirements
+
 ### Requirement: Start a capture
 Starting a capture SHALL take a device id, a sample rate, a sample limit (0 meaning run until stopped), optional trigger terms, and a pre-trigger fraction (default 0.1). Starting SHALL stop any capture already running, and SHALL replace the current capture with a new, empty one sized to the device's channel count.
 
@@ -47,7 +49,7 @@ The system SHALL report, on request: the state, a progress or error message, the
 - **THEN** the sample count increases between requests
 
 ### Requirement: Keep data on device failure
-If an FX2 board stops sending data for 1 second, or is disconnected, the acquisition SHALL end in state `error` with a message, and the samples captured so far SHALL be kept.
+If an FX2 board or a sigrok device stops sending data for 1 second after it has started sending, or is disconnected, the acquisition SHALL end in state `error` with a message, and the samples captured so far SHALL be kept.
 
 #### Scenario: Device stalls
 - **WHEN** an FX2 board stops streaming mid-capture
@@ -57,10 +59,17 @@ If an FX2 board stops sending data for 1 second, or is disconnected, the acquisi
 - **WHEN** the board is unplugged during a capture
 - **THEN** the state is `error` with the message "Device disconnected" and the captured samples remain
 
+#### Scenario: Sigrok device goes silent
+- **WHEN** a sigrok device has sent samples and then sends nothing for 1 second
+- **THEN** `sigrok-cli` is ended, the state is `error`, the message says "Device stopped sending after <n> samples" and notes that captured data was kept, and the captured samples remain viewable
+
+#### Scenario: Sigrok device unplugged
+- **WHEN** a sigrok device is unplugged during a capture
+- **THEN** the state is `error` with a message and the captured samples remain viewable
+
 ### Requirement: Channel storage
 The system SHALL store up to 16 channels, one bit per channel per sample. Samples SHALL be addressable by index from 0 to the stored count minus one.
 
 #### Scenario: 16-channel device
 - **WHEN** a 16-channel board is captured
 - **THEN** all 16 channels are stored and displayed
-

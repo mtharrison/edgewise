@@ -16,6 +16,7 @@ function device(id: string, overrides: Partial<DeviceInfo> = {}): DeviceInfo {
     samplerates: [1_000_000, 20_000_000, 24_000_000],
     defaultSamplerate: 20_000_000,
     note: null,
+    missingFirmware: null,
     ...overrides
   }
 }

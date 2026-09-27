@@ -1,0 +1,26 @@
+# Source: reconstructed from the sigrok-cli 0.7.2 / libsigrok 0.5.2 output format (sigrok-cli -V), not captured from a run.
+sigrok-cli 0.7.2
+
+Libraries and features:
+- libsigrok 0.5.2/5:1:1 (rt: 0.5.2/5:1:1).
+ - Libs:
+  - glib 2.72.4 (rt: 2.72.4/7204:4)
+  - libzip 1.7.3
+  - libserialport 0.1.1/1:0:1 (rt: 0.1.1/1:0:1)
+  - libusb-1.0 1.0.25.11696
+  - libftdi 1.5
+ - Host: x86_64-pc-linux-gnu, little-endian.
+ - SCPI backends: TCP, RPC, serial, USBTMC.
+- libsigrokdecode 0.5.3/6:1:2 (rt: 0.5.3/6:1:2).
+ - Libs:
+  - glib 2.72.4 (rt: 2.72.4/7204:4)
+  - Python 3.10.12 / 0x30a0cf0 (API 1013, ABI 3)
+ - Host: x86_64-pc-linux-gnu, little-endian.
+
+Firmware search paths:
+ - /home/user/.local/share/sigrok-firmware
+ - /usr/local/share/sigrok-firmware
+ - /usr/share/sigrok-firmware
+
+Protocol decoder search paths:
+ - /usr/share/libsigrokdecode/decoders

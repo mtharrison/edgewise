@@ -92,7 +92,7 @@ export function App() {
       })
     }
     restoreSettings(load())
-    refreshDevices().then(startSaving, startSaving)
+    refreshDevices({ rescan: true }).then(startSaving, startSaving)
     let timer: ReturnType<typeof setTimeout>
     let lastScan = performance.now()
     const tick = async () => {
