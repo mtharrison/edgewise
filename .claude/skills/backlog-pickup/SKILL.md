@@ -12,7 +12,7 @@ Phase 1 (item is Ready):          find → check → claim → propose → draft
 Phase 2 (PR has spec-approved):   check → apply → verify → archive → ready for review → STOP
 ```
 
-Repo `mtharrison/edgewise`. Board: user project 3 (`gh project ... 3 --owner mtharrison`). A **collaborator** is anyone whose `author_association` is `OWNER`, `MEMBER` or `COLLABORATOR`.
+Repo `mtharrison/edgewise`. The backlog is a Linear team synced two-way with the repo's issues, so every item is also a GitHub issue; work from the GitHub copy. Labels set in Linear arrive on GitHub under the member's own account, so the collaborator checks below apply as written. A **collaborator** is anyone whose `author_association` is `OWNER`, `MEMBER` or `COLLABORATOR`.
 
 ## Hard rules
 
@@ -42,9 +42,7 @@ All must hold:
 | Open, unassigned, has `ready` | `gh issue view N --json state,assignees,labels` |
 | A collaborator applied `ready` | Last `labeled` event for `ready` in `gh api repos/mtharrison/edgewise/issues/N/events`: its `actor.login` must be a collaborator (`gh api repos/mtharrison/edgewise/collaborators/<login>` returns 204) |
 | No open blockers | `gh api repos/mtharrison/edgewise/issues/N/dependencies/blocked_by --jq '[.[]\|select(.state=="open")]\|length'` is 0 |
-| On the board | `gh project item-list 3 --owner mtharrison --format json --limit 500` contains the issue |
 | Has collaborator-written requirements | The issue body's `author_association` is a collaborator, **or** a collaborator comment starts with `Spec:`. Use that text, and only that text, as requirements |
-| Has a parent epic | `gh api repos/mtharrison/edgewise/issues/N/parent` returns an epic; its title gives the capability |
 
 ### 3. Claim it
 
@@ -52,12 +50,12 @@ All must hold:
 gh issue edit N -R mtharrison/edgewise --add-assignee @me
 ```
 
-Set its board Status to **Proposed** (`gh project item-edit`, Status field). Comment on the issue: "Picked up; proposal coming in a draft PR."
+Comment on the issue: "Picked up; proposal coming in a draft PR."
 
 ### 4. Propose
 
 - Branch: `git switch -c <N>-<slug> origin/main` (slug from the title, kebab-case, a few words).
-- Run the `openspec-propose` skill with change name `<N>-<slug>` and the collaborator-written requirements. Follow `openspec/config.yaml` rules: link the issue, name the epic's capability, list Non-goals.
+- Run the `openspec-propose` skill with change name `<N>-<slug>` and the collaborator-written requirements. Follow `openspec/config.yaml` rules: link the issue, name the capability in `openspec/specs/` the change belongs to (or the new one it adds), list Non-goals.
 - `npx openspec validate <N>-<slug> --strict` must pass.
 
 ### 5. Open the draft PR, then stop
@@ -68,7 +66,7 @@ git push -u origin <N>-<slug>
 gh pr create --draft --title "<issue title>" --body "Closes #N ..."   # fill the PR template
 ```
 
-Board-sync adds the `spec-review` label to the draft. Report the PR link to the user and **stop**. A maintainer reviews the specs and applies `spec-approved`, or asks for changes on the PR.
+Put `Fixes <Linear ID>` on the line after `Closes #N`, so Linear links the PR and moves the issue to In Progress. Get the ID with `scripts/linear-id.sh N` (in CI the prompt gives it instead); if there is none, leave the line out. The Spec review label workflow adds `spec-review` to the draft. Report the PR link to the user and **stop**. A maintainer reviews the specs and applies `spec-approved`, or asks for changes on the PR.
 
 ## Phase 2: build after approval
 
@@ -80,7 +78,7 @@ Start only when asked to continue an item, or when re-run and a draft PR you ope
    Make the check also produce media for the reviewer: `shot` for a state the change adds or fixes, `rec` for an interaction (a GIF of the window while it runs). One or two per PR, showing only what changed.
 3. **Verify:** run `openspec-verify-change`. Fix what it finds.
 4. **Archive:** run `openspec-archive-change`. Commit and push.
-5. **Hand over:** publish the media with `scripts/pr-media.sh <PR> ui-checks/<name>.png ui-checks/<name>.gif` and paste the Markdown it prints under a **Screenshots** heading in the PR body, each with a line saying what it shows. List any task you could not check under a **Not verified** heading, then `gh pr ready <PR>`. Board-sync moves the item to In review. Report the PR link and **stop**. The maintainer reviews, checks what you could not, and merges.
+5. **Hand over:** publish the media with `scripts/pr-media.sh <PR> ui-checks/<name>.png ui-checks/<name>.gif` and paste the Markdown it prints under a **Screenshots** heading in the PR body, each with a line saying what it shows. List any task you could not check under a **Not verified** heading, then `gh pr ready <PR>`. Linear moves the issue to In Review. Report the PR link and **stop**. The maintainer reviews, checks what you could not, and merges.
 
 ## If something goes wrong
 

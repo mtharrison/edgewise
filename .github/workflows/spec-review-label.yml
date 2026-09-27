@@ -1,0 +1,42 @@
+# Marks spec-only draft PRs with the spec-review label until spec-approved is
+# applied or the PR leaves draft. Never checks out code.
+
+name: Spec review label
+
+on:
+  pull_request:
+    types: [opened, reopened, labeled, ready_for_review, converted_to_draft, closed]
+
+permissions:
+  pull-requests: write
+
+concurrency:
+  group: spec-review-${{ github.event.pull_request.number }}
+
+jobs:
+  spec-review-label:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ACTION: ${{ github.event.action }}
+      LABEL: ${{ github.event.label.name }}
+      NUMBER: ${{ github.event.pull_request.number }}
+      DRAFT: ${{ github.event.pull_request.draft }}
+      APPROVED: ${{ contains(github.event.pull_request.labels.*.name, 'spec-approved') }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Add or remove spec-review
+        run: |
+          set -euo pipefail
+          case "$ACTION" in
+            opened|reopened|converted_to_draft)
+              if [ "$DRAFT" = true ] && [ "$APPROVED" = false ]; then
+                gh pr edit "$NUMBER" -R "$REPO" --add-label spec-review
+                echo "Added spec-review"
+              fi ;;
+            labeled|ready_for_review|closed)
+              if [ "$ACTION" != labeled ] || [ "$LABEL" = spec-approved ]; then
+                gh pr edit "$NUMBER" -R "$REPO" --remove-label spec-review || true
+                echo "Removed spec-review"
+              fi ;;
+          esac
