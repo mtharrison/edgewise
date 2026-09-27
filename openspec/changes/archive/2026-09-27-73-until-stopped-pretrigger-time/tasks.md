@@ -21,7 +21,7 @@
 
 ## 4. Verify and archive
 
-- [ ] 4.1 Run `npm test` and `npm run typecheck` and confirm both pass
-- [ ] 4.2 Not checkable without a fast board: the memory-cap message on real hardware (covered by unit tests in 1.1 and 2.3); list it under **Not verified** in the PR
-- [ ] 4.3 Run the `openspec-verify-change` skill against `73-until-stopped-pretrigger-time` and resolve anything it flags
-- [ ] 4.4 Run the `openspec-archive-change` skill to archive the change and merge the deltas into `openspec/specs/trigger`, `acquisition` and `app-shell`
+- [x] 4.1 Run `npm test` and `npm run typecheck` and confirm both pass
+- [x] 4.2 Not checkable without a fast board: the memory-cap message on real hardware (covered by unit tests in 1.1 and 2.3); list it under **Not verified** in the PR
+- [x] 4.3 Run the `openspec-verify-change` skill against `73-until-stopped-pretrigger-time` and resolve anything it flags
+- [x] 4.4 Run the `openspec-archive-change` skill to archive the change and merge the deltas into `openspec/specs/trigger`, `acquisition` and `app-shell`
