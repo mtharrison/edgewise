@@ -57,6 +57,17 @@ impl Masks {
     }
 }
 
+/// Most memory the pre-trigger ring may use when there is no sample limit.
+pub const PRETRIGGER_CAP_BYTES: u64 = 64 * 1024 * 1024;
+
+/// Samples to keep before the trigger for `time` seconds (clamped to 0–1 s)
+/// at `samplerate` with `unit` bytes per sample, and whether the memory cap cut it.
+pub fn pretrigger_samples(time: f64, samplerate: u64, unit: usize) -> (u64, bool) {
+    let want = (time.clamp(0.0, 1.0) * samplerate as f64).round() as u64;
+    let cap = PRETRIGGER_CAP_BYTES / unit as u64;
+    (want.min(cap), want > cap)
+}
+
 pub struct Feeder {
     capture: Arc<Capture>,
     unit: usize,
@@ -66,13 +77,15 @@ pub struct Feeder {
     pre_bytes: usize,
     ring: VecDeque<u8>,
     prev: Option<u16>,
+    trigger_at: Option<u64>,
 }
 
 impl Feeder {
-    /// `pre` is the fraction of `limit` kept before the trigger point.
-    pub fn new(capture: Arc<Capture>, unit: usize, limit: u64, terms: &[TriggerTerm], pre: f64) -> Feeder {
+    /// `pre` is the fraction of `limit` kept before the trigger point;
+    /// with no limit, `pre_unlimited` samples are kept instead.
+    pub fn new(capture: Arc<Capture>, unit: usize, limit: u64, terms: &[TriggerTerm], pre: f64, pre_unlimited: u64) -> Feeder {
         let masks = (!terms.is_empty()).then(|| Masks::from(terms));
-        let pre_samples = if limit == 0 { 1_000_000 } else { (limit as f64 * pre.clamp(0.0, 0.99)) as u64 };
+        let pre_samples = if limit == 0 { pre_unlimited } else { (limit as f64 * pre.clamp(0.0, 0.99)) as u64 };
         Feeder {
             capture,
             unit,
@@ -82,7 +95,13 @@ impl Feeder {
             pre_bytes: pre_samples as usize * unit,
             ring: VecDeque::new(),
             prev: None,
+            trigger_at: None,
         }
+    }
+
+    /// Samples kept before the trigger, once it has fired.
+    pub fn trigger_at(&self) -> Option<u64> {
+        self.trigger_at
     }
 
     pub fn armed(&self) -> bool {
@@ -124,7 +143,9 @@ impl Feeder {
                 head.extend_from_slice(&data[..cut]);
                 let skip = head.len().saturating_sub(self.pre_bytes);
                 let head = &head[skip..];
-                self.capture.set_trigger(Some((head.len() / self.unit) as u64));
+                let at = (head.len() / self.unit) as u64;
+                self.trigger_at = Some(at);
+                self.capture.set_trigger(Some(at));
                 return self.write(head) && self.write(&data[cut..]);
             }
         }
@@ -143,7 +164,7 @@ mod tests {
     fn rising_trigger_keeps_pretrigger() {
         let cap = Arc::new(Capture::new(1000, 8));
         let terms = [TriggerTerm { channel: 2, condition: Condition::Rising }];
-        let mut f = Feeder::new(cap.clone(), 1, 100, &terms, 0.1);
+        let mut f = Feeder::new(cap.clone(), 1, 100, &terms, 0.1, 0);
         let mut data = vec![0u8; 500];
         for (i, x) in data.iter_mut().enumerate().skip(300) {
             *x = 4 | (i as u8 & 1);
@@ -155,5 +176,37 @@ mod tests {
         assert_eq!(s.meta.trigger, Some(10));
         assert_eq!(s.get(9), 0);
         assert_eq!(s.get(10) & 4, 4);
+    }
+
+    #[test]
+    fn pretrigger_time_to_samples() {
+        assert_eq!(pretrigger_samples(0.1, 1_000_000, 1), (100_000, false));
+        assert_eq!(pretrigger_samples(0.1, 24_000_000, 1), (2_400_000, false));
+        assert_eq!(pretrigger_samples(1.0, 24_000_000, 2), (24_000_000, false));
+        assert_eq!(pretrigger_samples(0.0, 24_000_000, 1), (0, false));
+        assert_eq!(pretrigger_samples(5.0, 1_000_000, 1), (1_000_000, false));
+        // 1 s at 100 MHz with 16 channels wants 200 MB.
+        assert_eq!(pretrigger_samples(1.0, 100_000_000, 2), (PRETRIGGER_CAP_BYTES / 2, true));
+        assert_eq!(pretrigger_samples(0.5, 200_000_000, 1), (PRETRIGGER_CAP_BYTES, true));
+    }
+
+    #[test]
+    fn until_stopped_keeps_pretrigger_time() {
+        let cap = Arc::new(Capture::new(10_000, 8));
+        let terms = [TriggerTerm { channel: 0, condition: Condition::Rising }];
+        let (pre, _) = pretrigger_samples(0.1, 10_000, 1);
+        let mut f = Feeder::new(cap.clone(), 1, 0, &terms, 0.1, pre);
+        // 500 ms low, then high.
+        let mut data = vec![0u8; 6000];
+        data[5000..].fill(1);
+        for chunk in data.chunks(700) {
+            assert!(f.push(chunk));
+        }
+        let s = cap.snapshot();
+        assert_eq!(f.trigger_at(), Some(1000));
+        assert_eq!(s.meta.trigger, Some(1000));
+        assert_eq!(s.len, 2000);
+        assert_eq!(s.get(999), 0);
+        assert_eq!(s.get(1000), 1);
     }
 }

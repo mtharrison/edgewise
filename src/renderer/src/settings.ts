@@ -21,6 +21,7 @@ export interface Saved {
   samplerate: number
   duration: number
   pretrigger: number
+  pretriggerTime: number
   channels: (SavedChannel | null)[]
   decoders: SavedDecoder[]
 }
@@ -28,15 +29,19 @@ export interface Saved {
 const KEY = 'edgewise.settings'
 const DEFAULT_DURATION = 0.1
 const DEFAULT_PRETRIGGER = 0.1
+const DEFAULT_PRETRIGGER_TIME = 0.1
 const TRIGGERS: (TriggerCondition | null)[] = [null, 'rising', 'falling', 'edge', 'high', 'low']
 
-export function toSaved(s: Pick<State, 'deviceId' | 'samplerate' | 'duration' | 'pretrigger' | 'channels' | 'decoders'>): Saved {
+export function toSaved(
+  s: Pick<State, 'deviceId' | 'samplerate' | 'duration' | 'pretrigger' | 'pretriggerTime' | 'channels' | 'decoders'>
+): Saved {
   return {
     version: 1,
     deviceId: s.deviceId,
     samplerate: s.samplerate,
     duration: s.duration,
     pretrigger: s.pretrigger,
+    pretriggerTime: s.pretriggerTime,
     channels: s.channels.map(({ name, color, visible, trigger }) => ({ name, color, visible, trigger })),
     decoders: s.decoders.map(({ config, visible }) => ({ config, visible }))
   }
@@ -75,13 +80,15 @@ export function parseSaved(text: string | null): Saved | null {
     return null
   }
   if (!isObj(v) || v.version !== 1) return null
-  const { deviceId, samplerate, duration, pretrigger, channels, decoders } = v
+  const { deviceId, samplerate, duration, pretrigger, pretriggerTime, channels, decoders } = v
   return {
     version: 1,
     deviceId: typeof deviceId === 'string' ? deviceId : null,
     samplerate: typeof samplerate === 'number' ? samplerate : 0,
     duration: typeof duration === 'number' && DURATIONS.includes(duration) ? duration : DEFAULT_DURATION,
     pretrigger: typeof pretrigger === 'number' && pretrigger >= 0 && pretrigger <= 0.9 ? pretrigger : DEFAULT_PRETRIGGER,
+    pretriggerTime:
+      typeof pretriggerTime === 'number' && pretriggerTime >= 0 && pretriggerTime <= 1 ? pretriggerTime : DEFAULT_PRETRIGGER_TIME,
     channels: Array.isArray(channels) ? channels.map(parseChannel) : [],
     decoders: Array.isArray(decoders) ? decoders.map(parseDecoder).filter((d): d is SavedDecoder => d !== null) : []
   }

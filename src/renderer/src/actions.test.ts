@@ -183,6 +183,7 @@ function savedWithBoard() {
     samplerate: 24_000_000,
     duration: 1,
     pretrigger: 0.3,
+    pretriggerTime: 0.25,
     channels,
     decoders: [
       { id: 0, name: '', color: '', rows: [], visible: true, config: { ...DECODER_DEFAULTS.uart, baud: 9600 } },
@@ -196,7 +197,7 @@ const board16 = device(boardOnPortA.id, { channels: 16, samplerates: [20_000_000
 describe('restoreSettings', () => {
   it('restores device, rate, channels and decoders on the next refresh', async () => {
     restoreSettings(savedWithBoard())
-    expect(useStore.getState()).toMatchObject({ duration: 1, pretrigger: 0.3 })
+    expect(useStore.getState()).toMatchObject({ duration: 1, pretrigger: 0.3, pretriggerTime: 0.25 })
 
     vi.mocked(engine.listDevices).mockResolvedValueOnce([demo, board16])
     await refreshDevices()
@@ -278,7 +279,7 @@ describe('refreshDevices with rescan', () => {
   it('fits remembered settings to the rescan result so a remembered sigrok device is selected', async () => {
     const channels = makeChannels(16)
     channels[0] = { ...channels[0], name: 'CLK' }
-    restoreSettings(toSaved({ deviceId: dslogic.id, samplerate: 100_000_000, duration: 1, pretrigger: 0.1, channels, decoders: [] }))
+    restoreSettings(toSaved({ deviceId: dslogic.id, samplerate: 100_000_000, duration: 1, pretrigger: 0.1, pretriggerTime: 0.1, channels, decoders: [] }))
     vi.mocked(engine.rescanDevices).mockResolvedValueOnce([demo, dslogic])
     await refreshDevices({ rescan: true })
 
@@ -332,7 +333,7 @@ describe('resetSettings', () => {
     vi.mocked(engine.listDevices).mockResolvedValueOnce([board16, demo])
     await refreshDevices()
     selectDevice(demo.id)
-    useStore.setState({ samplerate: 1_000_000, duration: 1, pretrigger: 0.3 })
+    useStore.setState({ samplerate: 1_000_000, duration: 1, pretrigger: 0.3, pretriggerTime: 0.7 })
     updateChannel(0, { name: 'TX', visible: false })
     setTrigger(2, 'rising')
     await addDecoder('uart')
@@ -346,7 +347,7 @@ describe('resetSettings', () => {
     resetSettings()
 
     const s = useStore.getState()
-    expect(s).toMatchObject({ deviceId: board16.id, samplerate: 20_000_000, duration: 0.1, pretrigger: 0.1, decoders: [] })
+    expect(s).toMatchObject({ deviceId: board16.id, samplerate: 20_000_000, duration: 0.1, pretrigger: 0.1, pretriggerTime: 0.1, decoders: [] })
     expect(s.channels).toEqual(makeChannels(16))
     expect(s.table.decoder).toBeNull()
     expect(engine.removeDecoder).toHaveBeenCalledOnce()
@@ -404,5 +405,39 @@ describe('startCapture missing firmware', () => {
 
     expect(bridge.chooseFirmware).not.toHaveBeenCalled()
     expect(engine.start).toHaveBeenCalledOnce()
+  })
+})
+
+describe('pre-trigger settings', () => {
+  beforeEach(async () => {
+    vi.mocked(engine.start).mockReset()
+    vi.mocked(engine.status).mockResolvedValue(status())
+    vi.mocked(engine.listDevices).mockResolvedValueOnce([demo])
+    await refreshDevices()
+  })
+
+  it('sends both the percentage and the "Until stopped" time on every start', async () => {
+    useStore.setState({ duration: 0, pretrigger: 0.3, pretriggerTime: 0.5 })
+    await startCapture()
+    expect(vi.mocked(engine.start).mock.calls[0][0]).toMatchObject({ sampleLimit: 0, pretrigger: 0.3, pretriggerTime: 0.5 })
+
+    useStore.setState({ duration: 1 })
+    await startCapture()
+    expect(vi.mocked(engine.start).mock.calls[1][0]).toMatchObject({ sampleLimit: 20_000_000, pretrigger: 0.3, pretriggerTime: 0.5 })
+  })
+
+  it('says how much was kept once per capture when the memory cap cut the pre-trigger time', async () => {
+    vi.mocked(engine.status).mockResolvedValueOnce(status({ state: 'running', captureId: 41, pretriggerKept: 0.042 }))
+    await pollStatus()
+    expect(useStore.getState().toast).toBe('Kept 42 ms before the trigger (memory limit)')
+
+    useStore.setState({ toast: null })
+    vi.mocked(engine.status).mockResolvedValueOnce(status({ state: 'running', captureId: 41, pretriggerKept: 0.042 }))
+    await pollStatus()
+    expect(useStore.getState().toast).toBeNull()
+
+    vi.mocked(engine.status).mockResolvedValueOnce(status({ state: 'running', captureId: 42 }))
+    await pollStatus()
+    expect(useStore.getState().toast).toBeNull()
   })
 })

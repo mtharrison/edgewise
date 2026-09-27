@@ -34,6 +34,7 @@ function customised(): Saved {
     samplerate: 24_000_000,
     duration: 1,
     pretrigger: 0.3,
+    pretriggerTime: 0.25,
     channels,
     decoders: [
       { id: 4, name: 'UART', color: '#fff', rows: ['RX'], visible: false, config: { ...DECODER_DEFAULTS.uart, baud: 9600 } },
@@ -65,6 +66,16 @@ describe('parseSaved', () => {
     const back = parseSaved(JSON.stringify({ ...customised(), duration: 3, pretrigger: 0.95 }))
     expect(back?.duration).toBe(0.1)
     expect(back?.pretrigger).toBe(0.1)
+  })
+
+  it('keeps the "Until stopped" pre-trigger time, replacing a missing or out-of-range one with 100 ms', () => {
+    expect(parseSaved(JSON.stringify(customised()))?.pretriggerTime).toBe(0.25)
+    expect(parseSaved(JSON.stringify({ ...customised(), pretriggerTime: 1 }))?.pretriggerTime).toBe(1)
+    expect(parseSaved(JSON.stringify({ ...customised(), pretriggerTime: 1.5 }))?.pretriggerTime).toBe(0.1)
+    expect(parseSaved(JSON.stringify({ ...customised(), pretriggerTime: -0.1 }))?.pretriggerTime).toBe(0.1)
+    expect(parseSaved(JSON.stringify({ ...customised(), pretriggerTime: '0.5' }))?.pretriggerTime).toBe(0.1)
+    const { pretriggerTime: _, ...old } = customised()
+    expect(parseSaved(JSON.stringify(old))?.pretriggerTime).toBe(0.1)
   })
 
   it('drops decoders of unknown kind and fills missing fields from the defaults', () => {

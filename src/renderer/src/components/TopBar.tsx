@@ -112,6 +112,9 @@ function CaptureButton({ busy, deviceConnected }: { busy: boolean; deviceConnect
 function TriggerChip() {
   const channels = useStore((s) => s.channels)
   const pretrigger = useStore((s) => s.pretrigger)
+  const pretriggerTime = useStore((s) => s.pretriggerTime)
+  // "Until stopped" has no length to take a percentage of, so it keeps a time instead.
+  const untilStopped = useStore((s) => s.duration === 0)
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const active = channels.filter((c) => c.trigger)
@@ -151,15 +154,26 @@ function TriggerChip() {
           </div>
           <label className="slider">
             <span>Pre-trigger</span>
-            <input
-              type="range"
-              min={0}
-              max={0.9}
-              step={0.05}
-              value={pretrigger}
-              onChange={(e) => set({ pretrigger: Number(e.target.value) })}
-            />
-            <span className="mono">{Math.round(pretrigger * 100)}%</span>
+            {untilStopped ? (
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={pretriggerTime}
+                onChange={(e) => set({ pretriggerTime: Number(e.target.value) })}
+              />
+            ) : (
+              <input
+                type="range"
+                min={0}
+                max={0.9}
+                step={0.05}
+                value={pretrigger}
+                onChange={(e) => set({ pretrigger: Number(e.target.value) })}
+              />
+            )}
+            <span className="mono">{untilStopped ? fmtTime(pretriggerTime) : `${Math.round(pretrigger * 100)}%`}</span>
           </label>
           {active.length > 0 && (
             <button className="link" onClick={() => active.forEach((c) => setTrigger(c.index, null))}>

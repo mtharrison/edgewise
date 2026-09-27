@@ -66,11 +66,15 @@ When the `EDGEWISE_CDP_PORT` environment variable is set, the app SHALL expose t
 - **THEN** a DevTools client can connect on port 9333
 
 ### Requirement: Remembered capture settings
-The app SHALL remember the capture settings whenever they change and restore them the next time it launches. The remembered settings SHALL be the selected device, sample rate, duration, pre-trigger, each channel's name, colour, visibility and trigger condition, and the decoders with their settings and visibility. If the remembered device is connected at launch (or, for an FX2 board, a board of the same model), it SHALL be selected; otherwise the first listed device SHALL be selected. The other settings SHALL be kept where they still apply to the selected device: the sample rate only if the device supports it (otherwise the device's default rate), channel settings only for channels the device has (other channels get default settings), and decoders only if every channel they read exists on the device. Opening a `.sr` file SHALL still take channel names from the file. If the saved settings are missing or unreadable, the app SHALL start with the default settings.
+The app SHALL remember the capture settings whenever they change and restore them the next time it launches. The remembered settings SHALL be the selected device, sample rate, duration, pre-trigger percentage, "Until stopped" pre-trigger time, each channel's name, colour, visibility and trigger condition, and the decoders with their settings and visibility. If the remembered device is connected at launch (or, for an FX2 board, a board of the same model), it SHALL be selected; otherwise the first listed device SHALL be selected. The other settings SHALL be kept where they still apply to the selected device: the sample rate only if the device supports it (otherwise the device's default rate), channel settings only for channels the device has (other channels get default settings), and decoders only if every channel they read exists on the device. A remembered pre-trigger percentage or time outside its slider's range SHALL be replaced by its default. Opening a `.sr` file SHALL still take channel names from the file. If the saved settings are missing or unreadable, the app SHALL start with the default settings.
 
 #### Scenario: Restart with the same board
 - **WHEN** the user selects a board, sets 24 MHz, 1 s, 30% pre-trigger, renames D0 to "TX", hides D7, sets a rising trigger on D2, adds a UART decoder on D0 at 9600 baud, and restarts the app with the board still connected
 - **THEN** the board is selected with 24 MHz, 1 s and 30% pre-trigger, D0 is named "TX", D7 is hidden, D2 has a rising trigger, and a UART decoder on D0 at 9600 baud is listed in the Analyzers panel
+
+#### Scenario: Restart with an "Until stopped" pre-trigger time
+- **WHEN** the user sets "Until stopped" with a 250 ms pre-trigger time and restarts the app
+- **THEN** the duration is "Until stopped" and the Pre-trigger slider shows 250 ms
 
 #### Scenario: Remembered device not connected
 - **WHEN** the app restarts and the remembered board is not connected, and the demo device is the first listed device
@@ -89,11 +93,15 @@ The app SHALL remember the capture settings whenever they change and restore the
 - **THEN** the app starts with the default settings and no error is shown
 
 ### Requirement: Reset capture settings
-The Capture menu SHALL offer Reset Capture Settings. Choosing it SHALL select the first listed device and set 20 MHz if the device supports it (otherwise the device's default rate), a 100 ms duration, 10% pre-trigger, `D<n>` channel names with default colours, all channels visible, no trigger conditions and no decoders, and SHALL replace the remembered settings with these defaults. It SHALL be ignored while a capture is in progress and SHALL NOT change the current capture.
+The Capture menu SHALL offer Reset Capture Settings. Choosing it SHALL select the first listed device and set 20 MHz if the device supports it (otherwise the device's default rate), a 100 ms duration, 10% pre-trigger, a 100 ms "Until stopped" pre-trigger time, `D<n>` channel names with default colours, all channels visible, no trigger conditions and no decoders, and SHALL replace the remembered settings with these defaults. It SHALL be ignored while a capture is in progress and SHALL NOT change the current capture.
 
 #### Scenario: Reset after customising
 - **WHEN** the user has renamed channels, set a trigger and added decoders, then chooses Capture → Reset Capture Settings and restarts the app
 - **THEN** the channels are named `D0`, `D1`, …, no trigger is set, no decoders are listed, and duration is 100 ms, both right after the reset and after the restart
+
+#### Scenario: Reset restores the "Until stopped" pre-trigger time
+- **WHEN** the user has set a 700 ms "Until stopped" pre-trigger time and chooses Capture → Reset Capture Settings
+- **THEN** switching the duration to "Until stopped" shows a 100 ms pre-trigger
 
 ### Requirement: Device scanning
 At launch, and when the user presses the rescan button, the UI SHALL ask for a full device scan, which includes the sigrok scan, and SHALL use the resulting list as a device refresh. The regular 3-second refresh SHALL only list devices and SHALL NOT start a sigrok scan. The app SHALL stay responsive while a scan runs, and the rescan button SHALL be disabled until the scan finishes. At launch, remembered capture settings SHALL be fitted to the list from the full scan, so a remembered sigrok device that is connected is selected. When the app is started with the `EDGEWISE_SIGROK_CLI` environment variable set, its value SHALL be given to the engine as the `sigrok-cli` path.

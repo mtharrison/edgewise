@@ -1,4 +1,5 @@
 import { bridge, engine } from './api'
+import { fmtTime } from './format'
 import { fitToDevice, overlayChannels, type Saved, type SavedDecoder } from './settings'
 import { DECODER_COLORS, get, makeChannels, set, useStore } from './store'
 import type { DecoderConfig, DecoderInst, DeviceInfo, Status, TriggerCondition } from './types'
@@ -34,7 +35,7 @@ let pendingRestore: Saved | null = null
  */
 export function restoreSettings(saved: Saved | null) {
   pendingRestore = saved
-  if (saved) set({ duration: saved.duration, pretrigger: saved.pretrigger })
+  if (saved) set({ duration: saved.duration, pretrigger: saved.pretrigger, pretriggerTime: saved.pretriggerTime })
 }
 
 /**
@@ -100,8 +101,8 @@ export function resetSettings() {
   const { status, decoders, devices } = get()
   if (isBusy(status)) return
   for (const d of decoders) engine.removeDecoder(d.id)
-  const { duration, pretrigger, samplerate, table } = useStore.getInitialState()
-  set({ decoders: [], table, duration, pretrigger, samplerate })
+  const { duration, pretrigger, pretriggerTime, samplerate, table } = useStore.getInitialState()
+  set({ decoders: [], table, duration, pretrigger, pretriggerTime, samplerate })
   if (devices.length) selectDevice(devices[0].id)
   set({ channels: makeChannels(get().channels.length) })
 }
@@ -111,7 +112,7 @@ export function isBusy(s: Status) {
 }
 
 export async function startCapture() {
-  const { deviceId, deviceConnected, samplerate, duration, channels, pretrigger } = get()
+  const { deviceId, deviceConnected, samplerate, duration, channels, pretrigger, pretriggerTime } = get()
   if (!deviceId) return toast('No device selected')
   if (!deviceConnected) return toast("Device isn't connected")
   const trigger = channels
@@ -130,7 +131,8 @@ export async function startCapture() {
       samplerate,
       sampleLimit: Math.round(duration * samplerate),
       trigger,
-      pretrigger
+      pretrigger,
+      pretriggerTime
     })
     await pollStatus()
   } catch (e) {
@@ -150,6 +152,7 @@ export function toggleCapture() {
 let lastDecodeAt = 0
 let lastCaptureId = -1
 let lastState = ''
+let lastKeptCaptureId = -1
 
 /** Poll engine status; re-run decoders when the capture changes. */
 export async function pollStatus() {
@@ -170,6 +173,10 @@ export async function pollStatus() {
     for (const d of get().decoders) engine.decode(d.id)
   }
   if (finished && s.state === 'error' && s.message) toast(s.message)
+  if (s.pretriggerKept !== null && s.captureId !== lastKeptCaptureId) {
+    lastKeptCaptureId = s.captureId
+    toast(`Kept ${fmtTime(s.pretriggerKept)} before the trigger (memory limit)`)
+  }
   lastState = s.state
   if (get().follow && s.samples > 0) fit()
 }

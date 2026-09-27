@@ -41,7 +41,10 @@ export interface State {
   scanning: boolean
   samplerate: number
   duration: number
+  /** Fraction of a timed capture kept before the trigger. */
   pretrigger: number
+  /** Seconds kept before the trigger in an "Until stopped" capture. */
+  pretriggerTime: number
   status: Status
   channels: Channel[]
   decoders: DecoderInst[]
@@ -63,6 +66,7 @@ export const useStore = create<State>(() => ({
   samplerate: 20_000_000,
   duration: 0.1,
   pretrigger: 0.1,
+  pretriggerTime: 0.1,
   status: {
     state: 'idle',
     message: '',
@@ -72,7 +76,8 @@ export const useStore = create<State>(() => ({
     trigger: null,
     captureId: 0,
     decoding: false,
-    decodeGen: 0
+    decodeGen: 0,
+    pretriggerKept: null
   },
   channels: makeChannels(8),
   decoders: [],
