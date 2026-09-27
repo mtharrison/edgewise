@@ -30,6 +30,8 @@ export interface Status {
   captureId: number
   decoding: boolean
   decodeGen: number
+  /** Seconds kept before the trigger when the memory cap cut the pre-trigger time short. */
+  pretriggerKept: number | null
 }
 
 export interface Annotation {

@@ -31,6 +31,7 @@ export const engine = {
     sampleLimit: number
     trigger: { channel: number; condition: string }[]
     pretrigger: number
+    pretriggerTime: number
   }): Promise<void> => call('start', opts),
   stop: (): Promise<void> => call('stop'),
   status: (): Promise<Status> => call('status'),

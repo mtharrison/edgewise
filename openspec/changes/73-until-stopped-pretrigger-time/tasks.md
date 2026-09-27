@@ -8,9 +8,9 @@
 
 ## 2. Renderer: separate setting, sent and remembered
 
-- [ ] 2.1 Add `pretriggerTime` (default 0.1) to `State` in `store.ts` and to the engine `start` options and `Status` type (`pretriggerKept`) in `api.ts`; pass it in `startCapture` (`actions.ts`); verify `npm run typecheck` passes
-- [ ] 2.2 Save and restore `pretriggerTime` in `settings.ts` (`toSaved`/`parseSaved`, falling back to 0.1 outside 0–1), restore it in `restoreSettings` and reset it in `resetSettings`; extend `settings.test.ts` (round trip, out-of-range fallback, missing field) and `actions.test.ts` (restore, reset to 0.1, `startCapture` sends both values)
-- [ ] 2.3 In `pollStatus`, toast "Kept <time> before the trigger (memory limit)" once per capture id when `pretriggerKept` is set; add an `actions.test.ts` case that it toasts once and not again on the next poll
+- [x] 2.1 Add `pretriggerTime` (default 0.1) to `State` in `store.ts` and to the engine `start` options and `Status` type (`pretriggerKept`) in `api.ts`; pass it in `startCapture` (`actions.ts`); verify `npm run typecheck` passes
+- [x] 2.2 Save and restore `pretriggerTime` in `settings.ts` (`toSaved`/`parseSaved`, falling back to 0.1 outside 0–1), restore it in `restoreSettings` and reset it in `resetSettings`; extend `settings.test.ts` (round trip, out-of-range fallback, missing field) and `actions.test.ts` (restore, reset to 0.1, `startCapture` sends both values)
+- [x] 2.3 In `pollStatus`, toast "Kept <time> before the trigger (memory limit)" once per capture id when `pretriggerKept` is set; add an `actions.test.ts` case that it toasts once and not again on the next poll
 
 ## 3. Slider in time for "Until stopped"
 
