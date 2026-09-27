@@ -90,6 +90,12 @@ Every PR SHALL run `openspec validate --all --strict` and the project's tests, a
 ### Requirement: Checks in the running app
 An agent SHALL check behavior that is visible in the app by driving the built app (`scripts/ui.mjs`) before it pushes, and SHALL be able to run the app, the tests and the typecheck in every workflow that lets it change code. What it could not check, such as behavior that needs a real board, SHALL be listed under "Not verified" in the PR description before the PR leaves draft. The maintainer checks those items in review.
 
+Behavior a user can see SHALL also be shown to the reviewer: the PR description SHALL embed a screenshot of each state the change adds or fixes, or a GIF of the interaction, taken from the running app by the check. Media SHALL be published to the `pr-media` branch (`scripts/pr-media.sh`), which holds only media and is never merged, so the app's history stays free of images.
+
+#### Scenario: Visible change
+- **WHEN** a change alters what the app shows, such as a new button state or message
+- **THEN** the PR description has a "Screenshots" section with an image or GIF of it from the running app, served from the `pr-media` branch
+
 #### Scenario: Check needs hardware
 - **WHEN** a task can only be checked with an FX2 board plugged in
 - **THEN** the agent lists it under "Not verified" in the PR and still marks the PR ready for review
