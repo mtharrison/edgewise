@@ -14,10 +14,10 @@
 
 ## 3. Slider in time for "Until stopped"
 
-- [ ] 3.1 In `TopBar.tsx`, bind the Pre-trigger slider to `pretrigger` (0–0.9, 5% steps, "%" label) when `duration > 0` and to `pretriggerTime` (0–1 s, 10 ms steps, `fmtTime` label) when `duration === 0`; verify `npm run typecheck` passes
-- [ ] 3.2 Add `scripts/checks/pretrigger-until-stopped.mjs` and run it with `node scripts/ui.mjs`: with defaults, 100 ms shows "10%" and "Until stopped" shows "100 ms" with max 1 s; set 30% at 1 s, switch to "Until stopped" and set 500 ms, switch back and see 30%, switch again and see 500 ms; `shot` the popover in "Until stopped"; Read the screenshots
-- [ ] 3.3 In the same check, run a triggered "Until stopped" capture on the demo device, stop it, and confirm the trigger position matches the pre-trigger time at the demo's rate; re-run `scripts/checks/remember-settings.mjs` and update it if it no longer passes
-- [ ] 3.4 Extend the check (or `remember-settings.mjs`) to set a 250 ms "Until stopped" pre-trigger, reload, and see 250 ms; then Reset Capture Settings and see 100 ms
+- [x] 3.1 In `TopBar.tsx`, bind the Pre-trigger slider to `pretrigger` (0–0.9, 5% steps, "%" label) when `duration > 0` and to `pretriggerTime` (0–1 s, 10 ms steps, `fmtTime` label) when `duration === 0`; verify `npm run typecheck` passes
+- [x] 3.2 Add `scripts/checks/pretrigger-until-stopped.mjs` and run it with `node scripts/ui.mjs`: with defaults, 100 ms shows "10%" and "Until stopped" shows "100 ms" with max 1 s; set 30% at 1 s, switch to "Until stopped" and set 500 ms, switch back and see 30%, switch again and see 500 ms; `shot` the popover in "Until stopped"; Read the screenshots
+- [x] 3.3 In the same check, run a triggered "Until stopped" capture on the demo device, stop it, and confirm the trigger position matches the pre-trigger time at the demo's rate; re-run `scripts/checks/remember-settings.mjs` and update it if it no longer passes
+- [x] 3.4 Extend the check (or `remember-settings.mjs`) to set a 250 ms "Until stopped" pre-trigger, reload, and see 250 ms; then Reset Capture Settings and see 100 ms
 
 ## 4. Verify and archive
 

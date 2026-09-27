@@ -291,11 +291,12 @@ input[type='checkbox'] {
 
 .slider {
   display: grid;
-  grid-template-columns: auto 1fr 36px;
+  grid-template-columns: auto 1fr 48px;
   align-items: center;
   gap: 10px;
   margin: 12px 0 4px;
   color: var(--text-2);
+  white-space: nowrap;
 }
 
 .slider input {
