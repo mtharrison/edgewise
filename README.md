@@ -24,7 +24,7 @@ npm run dev      # builds the Rust addon, then launches the app
 npm test         # Rust unit tests
 ```
 
-To try a pull request without disturbing your checkout, `scripts/pr-run.sh 41` checks it out in a sibling worktree and launches it.
+To try a pull request without disturbing your checkout, `npm run pr 41` checks it out in a reusable worktree next to this one (`../edgewise-review`), lists what its description says still needs checking by hand, and launches it. `npm run pr clean` removes the worktree.
 
 `node scripts/ui.mjs [check.mjs]` builds and launches the app under Playwright, runs each check script against it, and saves screenshots and GIFs to `ui-checks/`. CI and the agent workflows use it to see the app running; the script header gives the API. `scripts/pr-media.sh <PR> <files>` publishes those files to the `pr-media` branch and prints Markdown to embed them in the PR.
 
