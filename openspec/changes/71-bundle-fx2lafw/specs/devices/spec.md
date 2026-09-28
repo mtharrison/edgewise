@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Bundled fx2lafw firmware
-Every installer (macOS, Linux and Windows) SHALL ship, in the app's bundled firmware folder, the `.fw` files from one pinned sigrok-firmware-fx2lafw release, including a file for every FX2 board the app supports. The same folder SHALL hold fx2lafw's license text and a note naming the release and linking to its matching source release. Building an installer SHALL fail if the downloaded release does not match the pinned one, or if the bundled firmware folder lacks any of these files.
+Every installer (macOS, Linux and Windows) SHALL ship, in the app's bundled firmware folder, the `.fw` files from one pinned sigrok-firmware-fx2lafw release, including a file for every FX2 board the app supports. The same folder SHALL hold fx2lafw's license text, the complete source release that matches the shipped `.fw` files, and a note naming the release and naming that bundled source release as the firmware's source. Building an installer SHALL fail if the downloaded binary or source release does not match the pinned one, or if the bundled firmware folder lacks any of these files.
 
 #### Scenario: Fresh install with a bare board
 - **WHEN** the app is installed on a machine with no sigrok firmware anywhere, its user firmware folder is empty, and a bare Saleae clone is plugged in
@@ -10,10 +10,11 @@ Every installer (macOS, Linux and Windows) SHALL ship, in the app's bundled firm
 
 #### Scenario: License and source ship with the firmware
 - **WHEN** a user opens the bundled firmware folder of an installed app
-- **THEN** it contains fx2lafw's license text and a note linking to the source release that matches the shipped `.fw` files
+- **THEN** it contains fx2lafw's license text and the source release that matches the shipped `.fw` files
+- **AND** it contains a note naming that bundled source release as the firmware's source, so getting the source needs no network access
 
 #### Scenario: Download does not match the pinned release
-- **WHEN** an installer is built and the downloaded firmware release does not match the pinned release
+- **WHEN** an installer is built and the downloaded firmware binary release or source release does not match the pinned release
 - **THEN** the build fails and no installer is produced
 
 ## MODIFIED Requirements

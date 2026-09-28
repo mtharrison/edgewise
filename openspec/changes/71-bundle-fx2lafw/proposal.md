@@ -4,15 +4,16 @@
 
 Delivers #71. A new user who plugs in a bare Saleae clone sees "Needs fx2lafw-saleae-logic.fw in a firmware folder", then has to download sigrok's firmware and choose its folder before the first capture works. The firmware search already looks in the app's bundled firmware folder, but packaging never fills it: `electron-builder.yml` ships only `native/`.
 
-fx2lafw is GPL-2.0-or-later, but it runs on the board as a separate program, so shipping it next to Edgewise's MIT code is aggregation. The GPL allows that as long as its license text and a way to get the source come with it.
+fx2lafw is GPL-2.0-or-later, but it runs on the board as a separate program, so shipping it next to Edgewise's MIT code is aggregation. The GPL allows that as long as its license text and the source come with it. Edgewise ships fx2lafw's source tarball next to the binaries rather than a link: a link alone doesn't clearly meet GPLv2 §3, and relying on the GPLv3 option's §6(d) would make compliance depend on sigrok's download page never moving.
 
 ## What Changes
 
 - Packaging downloads a pinned sigrok-firmware-fx2lafw binary release, checks it against a recorded checksum, and ships its `.fw` files in the bundled firmware folder of every installer (macOS, Linux, Windows).
-- The bundled firmware folder also holds fx2lafw's license text and a note naming the release, with a link to its matching source release.
+- Packaging also downloads the matching sigrok-firmware-fx2lafw source tarball, checks it against its own recorded checksum, and ships it unchanged in the bundled firmware folder.
+- The bundled firmware folder also holds fx2lafw's license text and a note naming the release and the bundled source tarball as its source (the upstream URL stays as a secondary reference).
 - On a fresh install, a bare FX2 board is listed as "Firmware will be uploaded on first capture", and the first capture uploads the firmware with no user steps.
 - Firmware in the user firmware folder keeps taking precedence over the bundled copy.
-- A packaging check fails the release build if an installer's bundled firmware folder lacks the firmware files or the license.
+- A packaging check fails the release build if an installer's bundled firmware folder lacks the firmware files, the license or the source tarball.
 - The README says the firmware now ships with the app.
 
 ### Non-goals
@@ -32,13 +33,14 @@ None.
 
 ### Modified Capabilities
 
-- `devices`: adds a requirement that installers ship fx2lafw firmware, with its license and source link, in the bundled firmware folder, and adds scenarios to Firmware folders for a fresh install and for user firmware taking precedence.
+- `devices`: adds a requirement that installers ship fx2lafw firmware, with its license and source tarball, in the bundled firmware folder, and adds scenarios to Firmware folders for a fresh install and for user firmware taking precedence.
 
 ## Impact
 
 - `electron-builder.yml`: a second `extraResources` entry for `firmware/`.
-- New `scripts/fetch-firmware.mjs` (download, verify checksum, unpack into `firmware/`), run by `npm run package` before `electron-builder`; `firmware/` is gitignored.
+- New `scripts/fetch-firmware.mjs` (download the binary and source tarballs, verify both checksums, unpack the binaries and copy the source tarball into `firmware/`), run by `npm run package` before `electron-builder`; `firmware/` is gitignored.
 - New packaging check script, run by `.github/workflows/release.yml` after packaging.
 - `crates/logic-core/src/devices/fx2lafw.rs`: a unit test for folder precedence.
 - `README.md`: the Hardware section.
 - Packaging needs network access to sigrok.org (or a cached download).
+- Every installer grows by the size of the fx2lafw source tarball.
