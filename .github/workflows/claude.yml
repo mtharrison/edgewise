@@ -30,6 +30,9 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 1
+          # checkout v7 keeps the read-only GITHUB_TOKEN in an includeIf credentials file that
+          # claude-code-action doesn't clear, so pushes went out as github-actions[bot] and got a 403.
+          persist-credentials: false
       # Same tools as Auto build, so Claude can typecheck, test and run the app before pushing.
       - uses: ./.github/actions/setup
         with:
