@@ -21,5 +21,5 @@
 ## 4. Verify and archive
 
 - [x] 4.1 Run `npm test` and `npm run typecheck` and confirm both pass
-- [ ] 4.2 Run the `openspec-verify-change` skill against `71-bundle-fx2lafw` and resolve anything it flags
-- [ ] 4.3 Run the `openspec-archive-change` skill to archive the change and update `openspec/specs/devices/spec.md`
+- [x] 4.2 Run the `openspec-verify-change` skill against `71-bundle-fx2lafw` and resolve anything it flags
+- [x] 4.3 Run the `openspec-archive-change` skill to archive the change and update `openspec/specs/devices/spec.md`
