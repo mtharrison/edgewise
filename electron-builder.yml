@@ -1,5 +1,7 @@
 # Packaging for `npm run package`. The main process loads the Rust addon from
 # process.resourcesPath/native and firmware from process.resourcesPath/firmware.
+# firmware/ is filled by scripts/fetch-firmware.mjs (sigrok's fx2lafw, with its
+# license and source tarball); scripts/check-bundle.mjs checks the result.
 appId: com.edgewise.app
 productName: Edgewise
 directories:
@@ -10,6 +12,9 @@ extraResources:
   - from: native
     to: native
     filter: ['*.node']
+  - from: firmware
+    to: firmware
+    filter: ['*.fw', 'COPYING', 'README.txt', 'sigrok-firmware-fx2lafw-*.tar.gz']
 npmRebuild: false
 afterPack: scripts/after-pack.mjs
 artifactName: ${productName}-${version}-${os}-${arch}.${ext}

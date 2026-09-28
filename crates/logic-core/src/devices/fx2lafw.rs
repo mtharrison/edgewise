@@ -403,4 +403,18 @@ mod tests {
         );
         std::fs::remove_dir_all(&dir).unwrap();
     }
+
+    #[test]
+    fn find_firmware_prefers_the_first_folder() {
+        let root = std::env::temp_dir().join(format!("edgewise-fw-order-{}", std::process::id()));
+        let (user, bundled) = (root.join("user"), root.join("bundled"));
+        for dir in [&user, &bundled] {
+            std::fs::create_dir_all(dir).unwrap();
+            std::fs::write(dir.join("fx2lafw-saleae-logic.fw"), b"").unwrap();
+        }
+
+        let found = find_firmware(&[user.clone(), bundled.clone()], "fx2lafw-saleae-logic.fw");
+        assert_eq!(found, Some(user.join("fx2lafw-saleae-logic.fw")));
+        std::fs::remove_dir_all(&root).unwrap();
+    }
 }
