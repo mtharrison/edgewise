@@ -2,9 +2,9 @@
 
 ## 1. Fetch the pinned firmware
 
-- [ ] 1.1 Add `scripts/fetch-firmware.mjs`: download the pinned `sigrok-firmware-fx2lafw-bin-<version>.tar.gz`, fail with a clear message if its SHA-256 differs from the pinned hash, and unpack the `.fw` files and `COPYING` into `firmware/`; verify that running it twice downloads only once, and that changing the pinned hash makes it exit non-zero
-- [ ] 1.2 Make the script also download the matching `sigrok-firmware-fx2lafw-<version>.tar.gz` source tarball, fail with a clear message if its SHA-256 differs from its own pinned hash, and copy it unchanged into `firmware/`; then write `firmware/README.txt` naming the release version, its GPL-2.0-or-later license and the bundled source tarball as the source (upstream URL as a secondary reference); verify after a run that the tarball unpacks and its version matches the binaries, and that changing the pinned source hash makes the script exit non-zero
-- [ ] 1.3 Add `firmware/` to `.gitignore` and verify `git status` stays clean after a run
+- [x] 1.1 Add `scripts/fetch-firmware.mjs`: download the pinned `sigrok-firmware-fx2lafw-bin-<version>.tar.gz`, fail with a clear message if its SHA-256 differs from the pinned hash, and unpack the `.fw` files and `COPYING` into `firmware/`; verify that running it twice downloads only once, and that changing the pinned hash makes it exit non-zero
+- [x] 1.2 Make the script also download the matching `sigrok-firmware-fx2lafw-<version>.tar.gz` source tarball, fail with a clear message if its SHA-256 differs from its own pinned hash, and copy it unchanged into `firmware/`; then write `firmware/README.txt` naming the release version, its GPL-2.0-or-later license and the bundled source tarball as the source (upstream URL as a secondary reference); verify after a run that the tarball unpacks and its version matches the binaries, and that changing the pinned source hash makes the script exit non-zero
+- [x] 1.3 Add `firmware/` to `.gitignore` and verify `git status` stays clean after a run
 
 ## 2. Ship it in every installer
 
