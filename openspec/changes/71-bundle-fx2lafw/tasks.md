@@ -14,12 +14,12 @@
 
 ## 3. Precedence and docs
 
-- [ ] 3.1 Add a unit test in `crates/logic-core/src/devices/fx2lafw.rs` where two firmware folders both hold the file and `find_firmware` returns the first folder's copy; verify `npm test` passes
-- [ ] 3.2 Update the Hardware section of `README.md` to say the app ships sigrok's fx2lafw firmware (GPL-2.0-or-later, license and source tarball in the bundled firmware folder) and that files in the app's firmware folder take precedence; verify the wording matches the specs
+- [x] 3.1 Add a unit test in `crates/logic-core/src/devices/fx2lafw.rs` where two firmware folders both hold the file and `find_firmware` returns the first folder's copy; verify `npm test` passes
+- [x] 3.2 Update the Hardware section of `README.md` to say the app ships sigrok's fx2lafw firmware (GPL-2.0-or-later, license and source tarball in the bundled firmware folder) and that files in the app's firmware folder take precedence; verify the wording matches the specs
 - [ ] 3.3 On a real board with an installer from 2.3 (maintainer): on a machine with no sigrok firmware and an empty user firmware folder, plug in a bare Saleae clone and confirm it lists "Firmware will be uploaded on first capture" and the first capture succeeds with no dialog; then put a different copy of the file in the user firmware folder and confirm that copy is uploaded
 
 ## 4. Verify and archive
 
-- [ ] 4.1 Run `npm test` and `npm run typecheck` and confirm both pass
+- [x] 4.1 Run `npm test` and `npm run typecheck` and confirm both pass
 - [ ] 4.2 Run the `openspec-verify-change` skill against `71-bundle-fx2lafw` and resolve anything it flags
 - [ ] 4.3 Run the `openspec-archive-change` skill to archive the change and update `openspec/specs/devices/spec.md`
