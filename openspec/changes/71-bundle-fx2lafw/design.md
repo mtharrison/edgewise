@@ -34,7 +34,7 @@ Alternative: a Help-menu "Licenses" window. Useful later, but not needed for com
 
 ### Ship with `extraResources`, check the packaged output
 
-`electron-builder.yml` gets `- from: firmware, to: firmware, filter: ['*.fw', 'COPYING', 'README.txt', 'sigrok-firmware-fx2lafw-*.tar.gz']`. A packaging check (`scripts/check-bundle.mjs`) runs after `npm run package` in `release.yml`. It finds the unpacked app under `dist/` (`mac*/Edgewise.app/Contents/Resources`, `linux-unpacked/resources`, `win-unpacked/resources`) and fails unless its `firmware/` folder holds every firmware file named in the FX2 profile table, plus `COPYING`, `README.txt` and the source tarball. The check keeps its own list of those files, with a comment pointing at the table in `fx2lafw.rs`.
+`electron-builder.yml` gets `- from: firmware, to: firmware, filter: ['*.fw', 'COPYING', 'README.txt', 'sigrok-firmware-fx2lafw-*.tar.gz']`. A packaging check (`scripts/check-bundle.mjs`) runs at the end of `npm run package`, so every packaging step in `release.yml`, on all four runners, runs it without a workflow change. It finds the unpacked app under `dist/` (`mac*/Edgewise.app/Contents/Resources`, `linux*-unpacked/resources`, `win*-unpacked/resources`) and fails unless its `firmware/` folder holds every firmware file named in the FX2 profile table, plus `COPYING`, `README.txt` and the source tarball. The check reads the firmware file names from the profile table in `fx2lafw.rs`, so a board added there is checked without a second list to update.
 
 On macOS, `after-pack.mjs` re-signs the whole bundle after resources are added, and the notarized path signs it too, so the new files don't break signatures.
 

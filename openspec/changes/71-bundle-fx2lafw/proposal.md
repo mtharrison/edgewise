@@ -39,7 +39,7 @@ None.
 
 - `electron-builder.yml`: a second `extraResources` entry for `firmware/`.
 - New `scripts/fetch-firmware.mjs` (download the binary and source tarballs, verify both checksums, unpack the binaries and copy the source tarball into `firmware/`), run by `npm run package` before `electron-builder`; `firmware/` is gitignored.
-- New packaging check script, run by `.github/workflows/release.yml` after packaging.
+- New packaging check script, run at the end of `npm run package`, so `.github/workflows/release.yml` runs it after packaging.
 - `crates/logic-core/src/devices/fx2lafw.rs`: a unit test for folder precedence.
 - `README.md`: the Hardware section.
 - Packaging needs network access to sigrok.org (or a cached download).

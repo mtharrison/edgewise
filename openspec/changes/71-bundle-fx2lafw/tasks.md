@@ -8,9 +8,9 @@
 
 ## 2. Ship it in every installer
 
-- [ ] 2.1 Run the fetch script from `npm run package` before `electron-builder`, and add a `firmware` entry to `extraResources` in `electron-builder.yml` (with the header comment updated); verify `npm run package` on Linux produces `dist/linux-unpacked/resources/firmware/` with the `.fw` files, `COPYING`, `README.txt` and the source tarball (the filter must include `sigrok-firmware-fx2lafw-*.tar.gz`)
-- [ ] 2.2 Add `scripts/check-bundle.mjs`, which fails unless the unpacked app's `firmware/` folder under `dist/` holds every firmware file named in the FX2 profile table in `crates/logic-core/src/devices/fx2lafw.rs`, plus `COPYING`, `README.txt` and the source tarball; verify it passes on the Linux package from 2.1, and fails after deleting one `.fw` file from it and, separately, after deleting the source tarball
-- [ ] 2.3 Run `node scripts/check-bundle.mjs` after packaging in both packaging steps of `.github/workflows/release.yml`; verify with a manual `workflow_dispatch` run that all four jobs pass
+- [x] 2.1 Run the fetch script from `npm run package` before `electron-builder`, and add a `firmware` entry to `extraResources` in `electron-builder.yml` (with the header comment updated); verify `npm run package` on Linux produces `dist/linux-unpacked/resources/firmware/` with the `.fw` files, `COPYING`, `README.txt` and the source tarball (the filter must include `sigrok-firmware-fx2lafw-*.tar.gz`)
+- [x] 2.2 Add `scripts/check-bundle.mjs`, which fails unless the unpacked app's `firmware/` folder under `dist/` holds every firmware file named in the FX2 profile table in `crates/logic-core/src/devices/fx2lafw.rs`, plus `COPYING`, `README.txt` and the source tarball; verify it passes on the Linux package from 2.1, and fails after deleting one `.fw` file from it and, separately, after deleting the source tarball
+- [x] 2.3 Run `node scripts/check-bundle.mjs` after packaging in both packaging steps of `.github/workflows/release.yml` (it runs at the end of `npm run package`, which both steps call); verify (maintainer) with a manual `workflow_dispatch` run that all four jobs pass
 
 ## 3. Precedence and docs
 
