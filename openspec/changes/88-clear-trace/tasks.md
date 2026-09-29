@@ -2,8 +2,8 @@
 
 ## 1. Engine clear
 
-- [ ] 1.1 Add `Engine::clear()` in `crates/logic-core/src/engine.rs`. While busy it does nothing. Otherwise it swaps in an empty capture through `replace_capture()` and sets the state to `Idle` with no message and no `pretrigger_kept`. Add Rust unit tests for: a `done` capture from the demo device clears to `idle` with 0 samples and a higher capture id; an `error` state clears to `idle` with an empty message; clearing during a running "Until stopped" demo capture changes nothing. Verify with `npm test`
-- [ ] 1.2 Expose `clear` in `crates/logic-node/src/lib.rs` and verify the binding builds (`npm run build`)
+- [x] 1.1 Add `Engine::clear()` in `crates/logic-core/src/engine.rs`. While busy it does nothing. Otherwise it swaps in an empty capture through `replace_capture()` and sets the state to `Idle` with no message and no `pretrigger_kept`. Add Rust unit tests for: a `done` capture from the demo device clears to `idle` with 0 samples and a higher capture id; an `error` state clears to `idle` with an empty message; clearing during a running "Until stopped" demo capture changes nothing. Verify with `npm test`
+- [x] 1.2 Expose `clear` in `crates/logic-node/src/lib.rs` and verify the binding builds (`npm run build`)
 
 ## 2. Bridge and action
 
