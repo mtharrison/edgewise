@@ -145,6 +145,21 @@ export async function stopCapture() {
   await pollStatus()
 }
 
+/** Asks for confirmation, then discards the capture; settings and decoders stay. */
+export async function clearCapture() {
+  const { status } = get()
+  if (isBusy(status) || status.samples === 0) return
+  if (!(await bridge.confirmClear())) return
+  try {
+    await engine.clear()
+    set({ markers: { a: null, b: null }, measurement: null, hover: null })
+    await pollStatus()
+    fit()
+  } catch (e) {
+    toast(String((e as Error).message ?? e))
+  }
+}
+
 export function toggleCapture() {
   return isBusy(get().status) ? stopCapture() : startCapture()
 }

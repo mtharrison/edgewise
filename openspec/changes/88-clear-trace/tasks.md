@@ -7,8 +7,8 @@
 
 ## 2. Bridge and action
 
-- [ ] 2.1 Add `clear` to `ENGINE_METHODS` and a `clear:confirm` IPC handler in `src/main/index.ts` that shows the "Clear the capture?" message box (Clear / Cancel, Cancel default) and resolves true only for Clear. Expose it as `bridge.confirmClear` in `src/preload/index.ts` and `src/renderer/src/api.ts`, add `engine.clear`, and verify with `npm run typecheck`
-- [ ] 2.2 Add `clearCapture()` to `src/renderer/src/actions.ts`. It ignores the request when busy or when there are 0 samples, asks `bridge.confirmClear()`, then calls `engine.clear()`, resets markers, measurement and hover, and polls status. Add `actions.test.ts` cases for: confirmed clear calls `engine.clear` and resets markers; cancel doesn't call `engine.clear`; busy or empty doesn't open the dialog. Verify with `npm test`
+- [x] 2.1 Add `clear` to `ENGINE_METHODS` and a `clear:confirm` IPC handler in `src/main/index.ts` that shows the "Clear the capture?" message box (Clear / Cancel, Cancel default) and resolves true only for Clear. Expose it as `bridge.confirmClear` in `src/preload/index.ts` and `src/renderer/src/api.ts`, add `engine.clear`, and verify with `npm run typecheck`
+- [x] 2.2 Add `clearCapture()` to `src/renderer/src/actions.ts`. It ignores the request when busy or when there are 0 samples, asks `bridge.confirmClear()`, then calls `engine.clear()`, resets markers, measurement and hover, and polls status. Add `actions.test.ts` cases for: confirmed clear calls `engine.clear` and resets markers; cancel doesn't call `engine.clear`; busy or empty doesn't open the dialog. Verify with `npm test`
 
 ## 3. Top bar button
 
