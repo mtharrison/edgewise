@@ -8,12 +8,19 @@ export interface ViewRange {
 /** Fraction of the plot width a framed range spans; the rest is split as margins. */
 export const FRAME_SPAN = 0.9
 
-/** Clamps zoom to 1/64..4× the capture and keeps at least half the view on the capture. */
-export function clampViewTo(start: number, spp: number, samples: number, plotWidth: number): ViewRange {
+/** Empty time, in seconds, the view may show before the capture start and after its end. */
+export const VIEW_MARGIN_S = 0.01
+
+/**
+ * Clamps zoom to 64 px per sample in and, out, to the capture plus VIEW_MARGIN_S either side, and
+ * keeps the view within VIEW_MARGIN_S of the capture. A non-positive sample rate means no margin.
+ */
+export function clampViewTo(start: number, spp: number, samples: number, plotWidth: number, samplerate: number): ViewRange {
   const n = Math.max(samples, 1)
-  spp = Math.min(Math.max(spp, 1 / 64), (n / plotWidth) * 4)
+  const margin = samplerate > 0 ? VIEW_MARGIN_S * samplerate : 0
+  spp = Math.min(Math.max(spp, 1 / 64), (n + 2 * margin) / plotWidth)
   const visible = spp * plotWidth
-  start = Math.min(Math.max(start, -visible * 0.5), n - visible * 0.5)
+  start = Math.min(Math.max(start, -margin), n + margin - visible)
   return { start, spp }
 }
 

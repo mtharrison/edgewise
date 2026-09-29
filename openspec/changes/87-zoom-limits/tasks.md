@@ -2,9 +2,9 @@
 
 ## 1. View limits
 
-- [ ] 1.1 Add a `samplerate` argument to `clampViewTo` in `src/renderer/src/view.ts` and replace the 4× zoom-out cap and half-screen pan bounds with the 10 ms margin rules from design.md (margin 0 when the rate is not positive); update its doc comment. Verify with `npm run typecheck`
-- [ ] 1.2 Pass `status.samplerate` from `clampView` in `src/renderer/src/actions.ts`. Verify with `npm run typecheck`
-- [ ] 1.3 Update `src/renderer/src/view.test.ts`: zoom-out stops at capture + 2×10 ms, pan stops 10 ms before the start and 10 ms after the end, zoom-in is still 64 px per sample, an empty capture and a zero sample rate still clamp sensibly. Verify with `npm test`
+- [x] 1.1 Add a `samplerate` argument to `clampViewTo` in `src/renderer/src/view.ts` and replace the 4× zoom-out cap and half-screen pan bounds with the 10 ms margin rules from design.md (margin 0 when the rate is not positive); update its doc comment. Verify with `npm run typecheck`
+- [x] 1.2 Pass `status.samplerate` from `clampView` in `src/renderer/src/actions.ts`. Verify with `npm run typecheck`
+- [x] 1.3 Update `src/renderer/src/view.test.ts`: zoom-out stops at capture + 2×10 ms, pan stops 10 ms before the start and 10 ms after the end, zoom-in is still 64 px per sample, an empty capture and a zero sample rate still clamp sensibly. Verify with `npm test`
 
 ## 2. UI check
 
