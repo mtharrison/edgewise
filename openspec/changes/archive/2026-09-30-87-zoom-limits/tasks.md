@@ -12,5 +12,5 @@
 
 ## 3. Spec update and archive
 
-- [ ] 3.1 Run `npm test` and `npm run typecheck`, then verify the implementation against the change's specs with openspec-verify-change
-- [ ] 3.2 Archive the change with openspec-archive-change and check `openspec/specs/waveform-view/spec.md` has the updated "Zoom, pan and fit" requirement
+- [x] 3.1 Run `npm test` and `npm run typecheck`, then verify the implementation against the change's specs with openspec-verify-change
+- [x] 3.2 Archive the change with openspec-archive-change and check `openspec/specs/waveform-view/spec.md` has the updated "Zoom, pan and fit" requirement
