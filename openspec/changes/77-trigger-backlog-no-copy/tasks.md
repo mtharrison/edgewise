@@ -21,11 +21,11 @@
 
 ## 4. Measure
 
-- [ ] 4.1 Re-run the benchmark and confirm the 90% pre-trigger case's slowest push is at most 10 ms and peak backlog bytes stay within the pre-trigger size plus one chunk; put the before and after numbers in the PR description (the 10 ms figure on the dev Mac is for the maintainer to confirm)
-- [ ] 4.2 Run the app's demo-device capture with a trigger through a `scripts/ui.mjs` check to confirm the waveform and trigger position still display, and save a screenshot for the PR
+- [x] 4.1 Re-run the benchmark and confirm the 90% pre-trigger case's slowest push is at most 10 ms and peak backlog bytes stay within the pre-trigger size plus one chunk; put the before and after numbers in the PR description (the 10 ms figure on the dev Mac is for the maintainer to confirm)
+- [x] 4.2 Run the app's demo-device capture with a trigger through a `scripts/ui.mjs` check to confirm the waveform and trigger position still display, and save a screenshot for the PR
 
 ## 5. Verify and archive
 
-- [ ] 5.1 Run `npm test` and `npm run typecheck` and confirm both pass
+- [x] 5.1 Run `npm test` and `npm run typecheck` and confirm both pass
 - [ ] 5.2 Run the `openspec-verify-change` skill against `77-trigger-backlog-no-copy` and resolve anything it flags
 - [ ] 5.3 Run the `openspec-archive-change` skill to archive the change and update `openspec/specs/trigger/spec.md`
