@@ -152,9 +152,9 @@ export async function clearCapture() {
   if (!(await bridge.confirmClear())) return
   try {
     await engine.clear()
-    set({ markers: { a: null, b: null }, measurement: null, hover: null })
+    // The view goes back to its launch zoom; fitting 0 samples would zoom to nanoseconds.
+    set({ markers: { a: null, b: null }, measurement: null, hover: null, view: useStore.getInitialState().view })
     await pollStatus()
-    fit()
   } catch (e) {
     toast(String((e as Error).message ?? e))
   }

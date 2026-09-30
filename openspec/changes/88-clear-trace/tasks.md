@@ -12,8 +12,8 @@
 
 ## 3. Top bar button
 
-- [ ] 3.1 Add the Clear button (ghost icon button, `Trash2`, title "Clear capture") just before the capture button in `TopBar.tsx`, disabled while busy or when there are 0 samples, and wired to `clearCapture`. Verify with `npm run typecheck`
-- [ ] 3.2 Add `scripts/checks/clear-capture.mjs`. It stubs `dialog.showMessageBox`, then: on the demo device, checks Clear is disabled at launch; captures, adds a UART decoder and drops a marker; presses Clear and chooses Cancel, and checks the samples and marker are still there; presses Clear and chooses Clear, and checks "No capture yet" shows, the status bar reads Ready with no sample count, the decoder is still listed with no annotations, and no capture started. It also checks the dialog's message and buttons. Take `shot('clear-button')` of the top bar with a capture shown, and `rec('clear-capture')` of the confirmed clear. Run it with `node scripts/ui.mjs scripts/checks/clear-capture.mjs` and Read the screenshots
+- [x] 3.1 Add the Clear button (ghost icon button, `Trash2`, title "Clear capture") just before the capture button in `TopBar.tsx`, disabled while busy or when there are 0 samples, and wired to `clearCapture`. Verify with `npm run typecheck`
+- [x] 3.2 Add `scripts/checks/clear-capture.mjs`. It stubs `dialog.showMessageBox`, then: on the demo device, checks Clear is disabled at launch; captures, adds a UART decoder and drops a marker; presses Clear and chooses Cancel, and checks the samples and marker are still there; presses Clear and chooses Clear, and checks "No capture yet" shows, the status bar reads Ready with no sample count, the decoder is still listed with no annotations, and no capture started. It also checks the dialog's message and buttons. Take `shot('clear-button')` of the top bar with a capture shown, and `rec('clear-capture')` of the confirmed clear. Run it with `node scripts/ui.mjs scripts/checks/clear-capture.mjs` and Read the screenshots
 
 ## 4. Verify and archive
 

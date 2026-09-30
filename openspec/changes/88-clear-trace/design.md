@@ -19,7 +19,7 @@ See proposal.md for why. Right now the engine replaces its capture in two places
 - **The busy check lives in the engine as well as the UI.** Space and future menu paths can't then clear a live capture, and the Rust test can cover it.
 - **Decoders are re-run, not removed.** Changing the capture id makes `pollStatus()` re-decode every decoder. On an empty capture that gives empty rows, so annotations and the data table empty out and decoder configs stay. No new decoder code is needed.
 - **Confirmation goes through a dedicated `confirmClear` IPC**, which returns a boolean and uses `dialog.showMessageBox` with `buttons: ['Clear', 'Cancel']`, `defaultId: 1`, `cancelId: 1`. *Alternative:* `window.confirm`. Rejected because it can't be styled like the rest of the app's dialogs, and Playwright handles it differently from the stubbed native dialogs the existing checks use.
-- **Renderer action `clearCapture()`**: return if busy or if there are 0 samples, then `await bridge.confirmClear()`, then `engine.clear()`, reset `markers`, `measurement` and `hover`, then `pollStatus()` and `fit()`.
+- **Renderer action `clearCapture()`**: return if busy or if there are 0 samples, then `await bridge.confirmClear()`, then `engine.clear()`, reset `markers`, `measurement`, `hover` and the view (to its launch zoom, since fitting 0 samples zooms to nanoseconds), then `pollStatus()`.
 - **Button**: a `Trash2` lucide icon in an `icon-btn ghost` button placed just before `CaptureButton`, titled "Clear capture".
 
 ## Risks / Trade-offs
