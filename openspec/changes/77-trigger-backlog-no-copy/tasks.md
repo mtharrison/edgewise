@@ -2,8 +2,8 @@
 
 ## 1. Benchmark first
 
-- [ ] 1.1 Add `crates/logic-core/examples/ingest_bench.rs` as described in design.md: 480 KB blocks, 24 MHz, 8 channels, 10 s, a 60 Hz snapshot-and-render thread; cases no trigger, trigger at 5 s with 30% and with 90% pre-trigger; print throughput, slowest single push and peak backlog bytes at the trigger point
-- [ ] 1.2 Run it on the current code with `cargo run --release --example ingest_bench -p logic-core` and record the baseline numbers for the PR
+- [x] 1.1 Add `crates/logic-core/examples/ingest_bench.rs` as described in design.md: 480 KB blocks, 24 MHz, 8 channels, 10 s, a 60 Hz snapshot-and-render thread; cases no trigger, trigger at 5 s with 30% and with 90% pre-trigger; print throughput, slowest single push and peak backlog bytes at the trigger point
+- [x] 1.2 Run it on the current code with `cargo run --release --example ingest_bench -p logic-core` and record the baseline numbers for the PR
 
 ## 2. Capture start offset
 
