@@ -14,10 +14,10 @@
 
 ## 3. Chunked pre-trigger ring
 
-- [ ] 3.1 Replace `Feeder`'s `VecDeque<u8>` ring with chunks built through the capture's append path, dropping the oldest chunk once the ring holds at least one chunk more than the pre-trigger size (`crates/logic-core/src/trigger.rs`)
-- [ ] 3.2 On a trigger hit, append the part of the block before the hit to the ring, work out the origin and trigger position, hand the chunks to the capture, then write the rest of the block; keep the sample-limit count right
-- [ ] 3.3 Keep the existing `rising_trigger_keeps_pretrigger` and `until_stopped_keeps_pretrigger_time` tests passing, and add tests for: a pre-trigger larger than one chunk with the trigger mid-chunk, a hit before the ring has filled (trigger position equals the buffered count), a hit in the very first block, 16-channel data, and a trigger with a sample limit where the kept samples plus the rest exactly fill the limit
-- [ ] 3.4 Add a test that the ring never holds more than the pre-trigger size plus one chunk while waiting, counted from its chunk lengths
+- [x] 3.1 Replace `Feeder`'s `VecDeque<u8>` ring with chunks built through the capture's append path, dropping the oldest chunk once the ring holds at least one chunk more than the pre-trigger size (`crates/logic-core/src/trigger.rs`)
+- [x] 3.2 On a trigger hit, append the part of the block before the hit to the ring, work out the origin and trigger position, hand the chunks to the capture, then write the rest of the block; keep the sample-limit count right
+- [x] 3.3 Keep the existing `rising_trigger_keeps_pretrigger` and `until_stopped_keeps_pretrigger_time` tests passing, and add tests for: a pre-trigger larger than one chunk with the trigger mid-chunk, a hit before the ring has filled (trigger position equals the buffered count), a hit in the very first block, 16-channel data, and a trigger with a sample limit where the kept samples plus the rest exactly fill the limit
+- [x] 3.4 Add a test that the ring never holds more than the pre-trigger size plus one chunk while waiting, counted from its chunk lengths
 
 ## 4. Measure
 
