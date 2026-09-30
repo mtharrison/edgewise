@@ -86,6 +86,11 @@ impl Engine {
     }
 
     #[napi]
+    pub fn clear(&self) {
+        self.inner.clear();
+    }
+
+    #[napi]
     pub fn status(&self) -> Result<Value> {
         to_json(self.inner.status())
     }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Circle, FolderOpen, Play, RefreshCw, Square, Zap } from 'lucide-react'
+import { Circle, FolderOpen, Play, RefreshCw, Square, Trash2, Zap } from 'lucide-react'
 import { bridge } from '../api'
-import { isBusy, openFile, refreshDevices, selectDevice, setTrigger, toggleCapture } from '../actions'
+import { clearCapture, isBusy, openFile, refreshDevices, selectDevice, setTrigger, toggleCapture } from '../actions'
 import { fmtCount, fmtRate, fmtTime } from '../format'
 import { DURATIONS, set, useStore } from '../store'
 
@@ -78,6 +78,9 @@ export function TopBar() {
       {dev?.note && <div className="device-note" title={dev.note}>{dev.note}</div>}
       <button className="icon-btn ghost" title="Open capture (⌘O)" onClick={openFile}>
         <FolderOpen size={16} />
+      </button>
+      <button className="icon-btn ghost" title="Clear capture" onClick={clearCapture} disabled={busy || status.samples === 0}>
+        <Trash2 size={16} />
       </button>
       <CaptureButton busy={busy} deviceConnected={deviceConnected} />
     </header>
