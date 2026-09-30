@@ -2,8 +2,8 @@
 
 ## 1. Zoom-and-pan path
 
-- [ ] 1.1 Bring `viewPath` from `prototype/86-glide-cmd-click` (80b1f92) into `src/renderer/src/view.ts` and verify `npm run typecheck` passes
-- [ ] 1.2 Bring over its `viewPath` tests in `src/renderer/src/view.test.ts` (ends match, pure zoom about a shared centre, zoom-out on a long pan, zero length for identical views), add one for a combined pan and zoom (e.g. `spp` 2000 → 0.5 far away) whose midpoint `spp` is above both ends, and verify `npm test` passes
+- [x] 1.1 Bring `viewPath` from `prototype/86-glide-cmd-click` (80b1f92) into `src/renderer/src/view.ts` and verify `npm run typecheck` passes
+- [x] 1.2 Bring over its `viewPath` tests in `src/renderer/src/view.test.ts` (ends match, pure zoom about a shared centre, zoom-out on a long pan, zero length for identical views), add one for a combined pan and zoom (e.g. `spp` 2000 → 0.5 far away) whose midpoint `spp` is above both ends, and verify `npm test` passes
 
 ## 2. Glide on Cmd/Ctrl+click
 

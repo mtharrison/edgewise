@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { annotationAt, clampViewTo, frameRange } from './view'
+import { annotationAt, clampViewTo, frameRange, viewPath } from './view'
 
 describe('clampViewTo', () => {
   it('leaves a view within limits unchanged', () => {
@@ -72,5 +72,47 @@ describe('annotationAt', () => {
   it('returns a merged dense block as a whole', () => {
     const block = { start: 1000, end: 9000, text: '' }
     expect(annotationAt([block], 5000, 0)).toBe(block)
+  })
+})
+
+describe('viewPath', () => {
+  const W = 1000
+  const close = (a: { start: number; spp: number }, b: { start: number; spp: number }) => {
+    expect(a.start).toBeCloseTo(b.start, 3)
+    expect(a.spp).toBeCloseTo(b.spp, 6)
+  }
+
+  it('starts and ends at the given views', () => {
+    const a = { start: 0, spp: 2000 }
+    const b = { start: 1_500_000, spp: 0.5 }
+    const p = viewPath(a, b, W)
+    close(p.at(0), a)
+    close(p.at(1), b)
+  })
+
+  it('zooms about the shared centre without panning', () => {
+    const p = viewPath({ start: 0, spp: 10 }, { start: 4500, spp: 1 }, W)
+    for (const t of [0.25, 0.5, 0.75]) {
+      const v = p.at(t)
+      expect(v.start + (v.spp * W) / 2).toBeCloseTo(5000, 6)
+    }
+  })
+
+  it('zooms out on the way for a long pan', () => {
+    const a = { start: 0, spp: 1 }
+    const b = { start: 1_000_000, spp: 1 }
+    const mid = viewPath(a, b, W).at(0.5)
+    expect(mid.spp).toBeGreaterThan(10)
+  })
+
+  it('zooms out past both ends when panning far while zooming in', () => {
+    const a = { start: 0, spp: 2000 }
+    const b = { start: 500_000_000, spp: 0.5 }
+    const mid = viewPath(a, b, W).at(0.5)
+    expect(mid.spp).toBeGreaterThan(2000)
+  })
+
+  it('has zero length when the views match', () => {
+    expect(viewPath({ start: 5, spp: 2 }, { start: 5, spp: 2 }, W).length).toBe(0)
   })
 })

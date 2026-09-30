@@ -38,3 +38,38 @@ export function annotationAt<T extends { start: number; end: number }>(anns: T[]
   }
   return best
 }
+
+const RHO = Math.SQRT2
+
+/**
+ * Smooth zoom-and-pan path from `a` to `b` (van Wijk & Nuij, "Smooth and efficient zooming
+ * and panning"). A long pan zooms out on the way so both ends stay in sight. `at(t)` gives the
+ * view `t` (0..1) along the path; `length` is its perceived length, used to pick a duration.
+ */
+export function viewPath(a: ViewRange, b: ViewRange, plotWidth: number) {
+  const w0 = a.spp * plotWidth
+  const w1 = b.spp * plotWidth
+  const c0 = a.start + w0 / 2
+  const dx = b.start + w1 / 2 - c0
+  const toView = (center: number, width: number): ViewRange => ({ start: center - width / 2, spp: width / plotWidth })
+
+  if (Math.abs(dx) < 1e-9 * Math.max(w0, w1)) {
+    const length = Math.log(w1 / w0) / RHO
+    return { length: Math.abs(length), at: (t: number) => toView(c0 + t * dx, w0 * Math.exp(RHO * t * length)) }
+  }
+  const d = Math.abs(dx)
+  const r = (w: number, sign: number) => {
+    const bb = (w1 * w1 - w0 * w0 + sign * RHO ** 4 * d * d) / (2 * w * RHO ** 2 * d)
+    return Math.log(Math.sqrt(bb * bb + 1) - bb)
+  }
+  const r0 = r(w0, 1)
+  const length = (r(w1, -1) - r0) / RHO
+  return {
+    length,
+    at: (t: number) => {
+      const s = t * length
+      const u = (w0 / (RHO ** 2 * d)) * (Math.cosh(r0) * Math.tanh(RHO * s + r0) - Math.sinh(r0))
+      return toView(c0 + u * dx, (w0 * Math.cosh(r0)) / Math.cosh(RHO * s + r0))
+    }
+  }
+}
