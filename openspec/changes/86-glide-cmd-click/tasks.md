@@ -7,8 +7,8 @@
 
 ## 2. Glide on Cmd/Ctrl+click
 
-- [ ] 2.1 Add `glideTo` in `src/renderer/src/actions.ts` as in the prototype: requestAnimationFrame loop, duration scaled by path length and capped at 480 ms, ease-out, final frame writes the exact clamped target, stops if the store's view is no longer the one it last set, and cancels any previous glide. Verify `npm run typecheck` passes
-- [ ] 2.2 Make `frameSpan` set `follow: false` and glide to the clamped framed view, jumping in one step when `prefers-reduced-motion: reduce` matches or the path length is zero or not finite. Confirm with `grep -n frameSpan src/renderer/src` that the only callers are the Cmd/Ctrl+click handlers in `Waveform.tsx`, and that `centerOn`, `zoomAt`, `panBy` and fit are unchanged
+- [x] 2.1 Add `glideTo` in `src/renderer/src/actions.ts` as in the prototype: requestAnimationFrame loop, duration scaled by path length and capped at 480 ms, ease-out, final frame writes the exact clamped target, stops if the store's view is no longer the one it last set, and cancels any previous glide. Verify `npm run typecheck` passes
+- [x] 2.2 Make `frameSpan` set `follow: false` and glide to the clamped framed view, jumping in one step when `prefers-reduced-motion: reduce` matches or the path length is zero or not finite. Confirm with `grep -n frameSpan src/renderer/src` that the only callers are the Cmd/Ctrl+click handlers in `Waveform.tsx`, and that `centerOn`, `zoomAt`, `panBy` and fit are unchanged
 
 ## 3. UI check
 

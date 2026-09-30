@@ -3,7 +3,7 @@ import { fmtTime } from './format'
 import { fitToDevice, overlayChannels, type Saved, type SavedDecoder } from './settings'
 import { DECODER_COLORS, get, makeChannels, set, useStore } from './store'
 import type { DecoderConfig, DecoderInst, DeviceInfo, Status, TriggerCondition } from './types'
-import { clampViewTo, frameRange } from './view'
+import { clampViewTo, frameRange, viewPath, type ViewRange } from './view'
 
 const TRIGGER_CYCLE: (TriggerCondition | null)[] = [null, 'rising', 'falling', 'edge', 'high', 'low']
 
@@ -213,10 +213,38 @@ export function centerOn(sample: number, width?: number) {
   set({ view: clampView(sample - (plotWidth / 2) * spp, spp), follow: false })
 }
 
-/** Zooms and pans so [start, end] fills the plot width with a small margin. */
+let glide = 0
+
+const reduceMotion = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
+
+/**
+ * Moves the view to `to` along a smooth zoom-and-pan path. Anything else that sets the view
+ * meanwhile (pan, zoom, fit) takes over, and the glide stops where it is.
+ */
+function glideTo(to: ViewRange) {
+  cancelAnimationFrame(glide)
+  const { view: from, plotWidth } = get()
+  const path = viewPath(from, to, plotWidth)
+  if (reduceMotion() || !Number.isFinite(path.length) || path.length < 1e-3) return set({ view: to })
+  const ms = Math.min(180 + 110 * path.length, 480)
+  const t0 = performance.now()
+  let last = from
+  if (get().measurement) set({ measurement: null })
+  const step = (now: number) => {
+    if (get().view !== last) return
+    const t = Math.min((now - t0) / ms, 1)
+    last = t < 1 ? path.at(1 - (1 - t) ** 3) : to
+    set({ view: last })
+    if (t < 1) glide = requestAnimationFrame(step)
+  }
+  glide = requestAnimationFrame(step)
+}
+
+/** Glides the view so [start, end] fills the plot width with a small margin. */
 export function frameSpan(start: number, end: number) {
   const v = frameRange(start, end, get().plotWidth)
-  set({ view: clampView(v.start, v.spp), follow: false })
+  set({ follow: false })
+  glideTo(clampView(v.start, v.spp))
 }
 
 // ---- channels ----
