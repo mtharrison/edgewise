@@ -206,7 +206,7 @@ export function fit() {
 
 export function clampView(start: number, spp: number) {
   const { status, plotWidth } = get()
-  return clampViewTo(start, spp, status.samples, plotWidth)
+  return clampViewTo(start, spp, status.samples, plotWidth, status.samplerate)
 }
 
 export function zoomAt(factor: number, x: number) {
