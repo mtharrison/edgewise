@@ -15,7 +15,7 @@ const engine = new Engine()
 
 // Methods the renderer may call. Everything else stays in the main process.
 const ENGINE_METHODS = new Set([
-  'listDevices', 'rescanDevices', 'sigrokStatus', 'start', 'stop', 'status', 'render', 'samples', 'measure', 'findEdge', 'burstAt',
+  'listDevices', 'rescanDevices', 'sigrokStatus', 'start', 'stop', 'clear', 'status', 'render', 'samples', 'measure', 'findEdge', 'burstAt',
   'addDecoder', 'updateDecoder', 'removeDecoder', 'decode', 'decoderRows',
   'annotations', 'annotationPage', 'annotationIndex', 'load', 'save', 'exportVcd'
 ])
@@ -153,6 +153,17 @@ app.whenReady().then(() => {
   })
   ipcMain.handle('firmware:open', () => shell.openPath(userFirmwareDir))
   ipcMain.handle('firmware:missing', (_e, file: string) => chooseFirmware(file))
+  ipcMain.handle('clear:confirm', async () => {
+    const r = await dialog.showMessageBox(win!, {
+      type: 'question',
+      message: 'Clear the capture?',
+      detail: 'The captured samples will be discarded.',
+      buttons: ['Clear', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1
+    })
+    return r.response === 0
+  })
 
   buildMenu()
   createWindow()

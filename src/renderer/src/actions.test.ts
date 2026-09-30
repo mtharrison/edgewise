@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DeviceInfo, Status } from './types'
 
 vi.mock('./api', () => ({
-  bridge: { chooseFirmware: vi.fn() },
+  bridge: { chooseFirmware: vi.fn(), confirmClear: vi.fn() },
   engine: {
+    clear: vi.fn(),
     listDevices: vi.fn(),
     rescanDevices: vi.fn(),
     start: vi.fn(),
@@ -18,6 +19,7 @@ vi.mock('./api', () => ({
 import { bridge, engine } from './api'
 import {
   addDecoder,
+  clearCapture,
   cycleTrigger,
   DECODER_DEFAULTS,
   pollStatus,
@@ -363,6 +365,43 @@ describe('resetSettings', () => {
 
     expect(useStore.getState()).toBe(before)
     expect(engine.removeDecoder).not.toHaveBeenCalled()
+  })
+})
+
+describe('clearCapture', () => {
+  const captured = status({ state: 'done', samples: 1234, captureId: 3 })
+
+  beforeEach(() => {
+    vi.mocked(bridge.confirmClear).mockReset()
+    vi.mocked(engine.clear).mockReset()
+    vi.mocked(engine.status).mockResolvedValue(status({ captureId: 4 }))
+    useStore.setState({ status: captured, markers: { a: 100, b: 200 } })
+  })
+
+  it('clears the capture and markers once confirmed', async () => {
+    vi.mocked(bridge.confirmClear).mockResolvedValueOnce(true)
+    await clearCapture()
+    expect(engine.clear).toHaveBeenCalledOnce()
+    const s = useStore.getState()
+    expect(s.markers).toEqual({ a: null, b: null })
+    expect(s.measurement).toBeNull()
+    expect(s.status).toMatchObject({ state: 'idle', samples: 0 })
+  })
+
+  it('changes nothing when cancelled', async () => {
+    vi.mocked(bridge.confirmClear).mockResolvedValueOnce(false)
+    await clearCapture()
+    expect(engine.clear).not.toHaveBeenCalled()
+    expect(useStore.getState()).toMatchObject({ status: captured, markers: { a: 100, b: 200 } })
+  })
+
+  it('does not ask while capturing or with nothing captured', async () => {
+    useStore.setState({ status: status({ state: 'running', samples: 1234 }) })
+    await clearCapture()
+    useStore.setState({ status: status() })
+    await clearCapture()
+    expect(bridge.confirmClear).not.toHaveBeenCalled()
+    expect(engine.clear).not.toHaveBeenCalled()
   })
 })
 

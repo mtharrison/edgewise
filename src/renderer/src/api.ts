@@ -6,6 +6,7 @@ interface Bridge {
   saveDialog: (kind: 'sr' | 'vcd') => Promise<string | null>
   openFirmwareFolder: () => Promise<void>
   chooseFirmware: (file: string) => Promise<boolean>
+  confirmClear: () => Promise<boolean>
   onMenu: (cb: (cmd: string) => void) => () => void
   platform: string
 }
@@ -34,6 +35,8 @@ export const engine = {
     pretriggerTime: number
   }): Promise<void> => call('start', opts),
   stop: (): Promise<void> => call('stop'),
+  /** Discards the capture and goes back to idle; ignored while capturing. */
+  clear: (): Promise<void> => call('clear'),
   status: (): Promise<Status> => call('status'),
   render: (start: number, spp: number, width: number): Promise<Uint16Array> => call('render', start, spp, width),
   samples: (start: number, count: number): Promise<Uint16Array> => call('samples', start, count),
