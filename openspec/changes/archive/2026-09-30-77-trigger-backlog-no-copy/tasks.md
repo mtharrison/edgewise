@@ -27,5 +27,5 @@
 ## 5. Verify and archive
 
 - [x] 5.1 Run `npm test` and `npm run typecheck` and confirm both pass
-- [ ] 5.2 Run the `openspec-verify-change` skill against `77-trigger-backlog-no-copy` and resolve anything it flags
-- [ ] 5.3 Run the `openspec-archive-change` skill to archive the change and update `openspec/specs/trigger/spec.md`
+- [x] 5.2 Run the `openspec-verify-change` skill against `77-trigger-backlog-no-copy` and resolve anything it flags
+- [x] 5.3 Run the `openspec-archive-change` skill to archive the change and update `openspec/specs/trigger/spec.md`
