@@ -245,9 +245,27 @@ pub struct CaptureMeta {
     pub trigger: Option<u64>,
 }
 
+/// Append `bytes` to a chunk list, building summaries as it goes; returns the
+/// number of samples added. Shared by [`Capture`] and the trigger's pre-trigger ring.
+pub fn append_chunks(chunks: &mut Vec<Arc<Chunk>>, unitsize: usize, mut bytes: &[u8]) -> u64 {
+    let mut added = 0;
+    while bytes.len() >= unitsize {
+        if chunks.last().map_or(true, |c| c.len == CHUNK) {
+            chunks.push(Arc::new(Chunk::new(unitsize)));
+        }
+        // Clones the tail chunk only if a reader currently holds it.
+        let n = Arc::make_mut(chunks.last_mut().unwrap()).append(bytes);
+        added += n as u64;
+        bytes = &bytes[n * unitsize..];
+    }
+    added
+}
+
 struct State {
     meta: CaptureMeta,
     chunks: Vec<Arc<Chunk>>,
+    /// Local index in chunk 0 of sample 0; earlier samples there are not part of the capture.
+    origin: usize,
     len: u64,
 }
 
@@ -263,23 +281,44 @@ impl Capture {
             state: Mutex::new(State {
                 meta: CaptureMeta { samplerate, channels, unitsize, trigger: None },
                 chunks: Vec::new(),
+                origin: 0,
                 len: 0,
             }),
         }
     }
 
-    pub fn append(&self, mut bytes: &[u8]) {
+    pub fn append(&self, bytes: &[u8]) {
         let mut st = self.state.lock();
         let unitsize = st.meta.unitsize;
-        while bytes.len() >= unitsize {
-            if st.chunks.last().map_or(true, |c| c.len == CHUNK) {
-                st.chunks.push(Arc::new(Chunk::new(unitsize)));
-            }
-            // Clones the tail chunk only if a reader currently holds it.
-            let n = Arc::make_mut(st.chunks.last_mut().unwrap()).append(bytes);
-            st.len += n as u64;
-            bytes = &bytes[n * unitsize..];
+        st.len += append_chunks(&mut st.chunks, unitsize, bytes);
+    }
+
+    /// Replace an empty capture's contents with ready-built chunks, without
+    /// copying samples. Sample 0 is local index `origin` of the first chunk;
+    /// everything from there to the end of the last chunk becomes the capture.
+    pub fn adopt(&self, mut chunks: Vec<Arc<Chunk>>, mut origin: usize) {
+        // Drop leading chunks that hold no kept sample, so chunk 0 is never empty.
+        let skip = chunks
+            .iter()
+            .take_while(|c| {
+                let whole = origin >= c.len;
+                if whole {
+                    origin -= c.len;
+                }
+                whole
+            })
+            .count();
+        chunks.drain(..skip);
+        if chunks.is_empty() {
+            origin = 0;
         }
+        let mut st = self.state.lock();
+        assert!(st.chunks.is_empty(), "adopt needs an empty capture");
+        debug_assert!(chunks.iter().all(|c| c.unitsize == st.meta.unitsize));
+        debug_assert!(chunks.iter().rev().skip(1).all(|c| c.len == CHUNK), "only the last chunk may be partial");
+        st.len = chunks.iter().map(|c| c.len as u64).sum::<u64>() - origin as u64;
+        st.chunks = chunks;
+        st.origin = origin;
     }
 
     pub fn set_trigger(&self, at: Option<u64>) {
@@ -288,7 +327,7 @@ impl Capture {
 
     pub fn snapshot(&self) -> Snapshot {
         let st = self.state.lock();
-        Snapshot { meta: st.meta.clone(), chunks: st.chunks.clone(), len: st.len }
+        Snapshot { meta: st.meta.clone(), chunks: st.chunks.clone(), origin: st.origin as u64, len: st.len }
     }
 
     pub fn len(&self) -> u64 {
@@ -297,21 +336,26 @@ impl Capture {
 }
 
 /// Immutable view of a capture at a point in time.
+///
+/// Sample indices are 0-based; internally sample `i` is stored at position
+/// `i + origin` of the chunk list ("physical" index).
 #[derive(Clone)]
 pub struct Snapshot {
     pub meta: CaptureMeta,
     chunks: Vec<Arc<Chunk>>,
+    origin: u64,
     pub len: u64,
 }
 
 impl Snapshot {
     pub fn empty() -> Snapshot {
-        Snapshot { meta: CaptureMeta::default(), chunks: Vec::new(), len: 0 }
+        Snapshot { meta: CaptureMeta::default(), chunks: Vec::new(), origin: 0, len: 0 }
     }
 
     #[inline]
     pub fn get(&self, i: u64) -> u16 {
-        self.chunks[(i >> CHUNK_BITS) as usize].get((i as usize) & (CHUNK - 1))
+        let p = i + self.origin;
+        self.chunks[(p >> CHUNK_BITS) as usize].get((p as usize) & (CHUNK - 1))
     }
 
     /// Summary of [a, b), clipped to the capture.
@@ -320,6 +364,7 @@ impl Snapshot {
         if a >= b {
             return None;
         }
+        let (a, b) = (a + self.origin, b + self.origin);
         let mut acc = None;
         let mut pos = a;
         while pos < b {
@@ -341,12 +386,13 @@ impl Snapshot {
             return None;
         }
         let mut prev = self.get(from);
+        let start = start + self.origin;
         let mut ci = (start >> CHUNK_BITS) as usize;
         let mut lo = (start as usize) & (CHUNK - 1);
         while ci < self.chunks.len() {
             let c = &self.chunks[ci];
             if let Some(i) = c.find_fwd(mask, lo, prev) {
-                return Some(((ci as u64) << CHUNK_BITS) + i as u64);
+                return Some(((ci as u64) << CHUNK_BITS) + i as u64 - self.origin);
             }
             prev = c.get(c.len - 1);
             lo = 0;
@@ -362,12 +408,15 @@ impl Snapshot {
         }
         let from = from.min(self.len - 1);
         let mut carry = self.get(from);
+        let from = from + self.origin;
         let mut ci = (from >> CHUNK_BITS) as isize;
         let mut cur = (from as usize) & (CHUNK - 1);
         while ci >= 0 {
             let c = &self.chunks[ci as usize];
             if let Some(i) = c.find_back(mask, cur, carry) {
-                return Some(((ci as u64) << CHUNK_BITS) + i as u64);
+                // An edge at or before the origin involves samples outside the capture.
+                let p = ((ci as u64) << CHUNK_BITS) + i as u64;
+                return (p > self.origin).then(|| p - self.origin);
             }
             carry = c.get(0);
             ci -= 1;
@@ -456,7 +505,8 @@ impl Snapshot {
     /// Iterate raw byte slices covering [0, len), chunk by chunk.
     pub fn raw_chunks(&self) -> impl Iterator<Item = &[u8]> {
         let unit = self.meta.unitsize;
-        self.chunks.iter().map(move |c| &c.data[..c.len * unit])
+        let skip = self.origin as usize * unit;
+        self.chunks.iter().enumerate().map(move |(i, c)| &c.data[if i == 0 { skip } else { 0 }..c.len * unit])
     }
 }
 
@@ -470,6 +520,65 @@ mod tests {
             c.append(part);
         }
         c.snapshot()
+    }
+
+    /// Origins tried by the brute-force tests: none, mid-chunk, and near the
+    /// end of chunk 0 so the data crosses into chunk 1 almost at once.
+    const ORIGINS: [usize; 3] = [0, 12_345, CHUNK - 3];
+
+    /// Like `cap_from`, but the capture starts `origin` samples into its first
+    /// chunk. The samples before it toggle every bit, so any that leak into
+    /// results show up as extra edges.
+    fn cap_with_origin(samples: &[u8], origin: usize) -> Snapshot {
+        let mut chunks = Vec::new();
+        let junk: Vec<u8> = (0..origin).map(|i| if (origin - i) % 2 == 1 { !samples[0] } else { samples[0] }).collect();
+        for part in junk.chunks(77_777).chain(samples.chunks(77_777)) {
+            append_chunks(&mut chunks, 1, part);
+        }
+        let c = Capture::new(1_000_000, 8);
+        c.adopt(chunks, origin);
+        c.snapshot()
+    }
+
+    #[test]
+    fn adopt_keeps_samples_after_origin() {
+        let data: Vec<u8> = (0..CHUNK + 500).map(|i| (i % 251) as u8).collect();
+        for origin in [0, 1, 700, CHUNK - 1, CHUNK, CHUNK + 20] {
+            let mut chunks = Vec::new();
+            append_chunks(&mut chunks, 1, &data);
+            let c = Capture::new(1_000_000, 8);
+            c.adopt(chunks, origin);
+            let s = c.snapshot();
+            assert_eq!(s.len as usize, data.len() - origin, "origin {origin}");
+            assert_eq!(s.samples(0, 5), data[origin..origin + 5].iter().map(|&v| v as u16).collect::<Vec<_>>());
+            assert_eq!(s.get(s.len - 1), *data.last().unwrap() as u16);
+            let raw: Vec<u8> = s.raw_chunks().flatten().copied().collect();
+            assert_eq!(raw, data[origin..], "origin {origin}");
+            // Appending carries on from the adopted tail chunk.
+            c.append(&[9, 9]);
+            let s = c.snapshot();
+            assert_eq!(s.len as usize, data.len() - origin + 2);
+            assert_eq!(s.get(s.len - 1), 9);
+            assert_eq!(s.summary(s.len - 3, s.len).unwrap().first, *data.last().unwrap() as u16);
+        }
+        // Everything before the origin: the capture ends up empty.
+        let mut chunks = Vec::new();
+        append_chunks(&mut chunks, 1, &data[..300]);
+        let c = Capture::new(1_000_000, 8);
+        c.adopt(chunks, 300);
+        assert_eq!(c.len(), 0);
+        c.append(&[1, 2]);
+        assert_eq!(c.snapshot().samples(0, 2), vec![1, 2]);
+    }
+
+    #[test]
+    fn render_with_origin_matches_plain() {
+        let mut seed = 3;
+        let data: Vec<u8> = (0..CHUNK + 9000).map(|_| (lcg(&mut seed) % 1000 == 0) as u8).collect();
+        let want = cap_from(&data).render(-10.5, 713.25, 1600);
+        for origin in ORIGINS {
+            assert_eq!(cap_with_origin(&data, origin).render(-10.5, 713.25, 1600), want, "origin {origin}");
+        }
     }
 
     fn lcg(seed: &mut u64) -> u64 {
@@ -490,19 +599,26 @@ mod tests {
                 v
             })
             .collect();
-        let s = cap_from(&data);
-        assert_eq!(s.len as usize, data.len());
-        for _ in 0..300 {
-            let a = lcg(&mut seed) as usize % data.len();
-            let b = a + 1 + lcg(&mut seed) as usize % (data.len() - a);
+        for origin in ORIGINS {
+            let s = cap_with_origin(&data, origin);
+            assert_eq!(s.len as usize, data.len());
+            for _ in 0..300 {
+                let a = lcg(&mut seed) as usize % data.len();
+                let b = a + 1 + lcg(&mut seed) as usize % (data.len() - a);
+                let mut mask = 0u8;
+                for w in data[a..b].windows(2) {
+                    mask |= w[0] ^ w[1];
+                }
+                let n = s.summary(a as u64, b as u64).unwrap();
+                assert_eq!(n.first, data[a] as u16);
+                assert_eq!(n.last, data[b - 1] as u16);
+                assert_eq!(n.mask, mask as u16, "range {a}..{b} origin {origin}");
+            }
             let mut mask = 0u8;
-            for w in data[a..b].windows(2) {
+            for w in data.windows(2) {
                 mask |= w[0] ^ w[1];
             }
-            let n = s.summary(a as u64, b as u64).unwrap();
-            assert_eq!(n.first, data[a] as u16);
-            assert_eq!(n.last, data[b - 1] as u16);
-            assert_eq!(n.mask, mask as u16, "range {a}..{b}");
+            assert_eq!(s.summary(0, s.len).unwrap().mask, mask as u16, "whole capture, origin {origin}");
         }
     }
 
@@ -524,23 +640,31 @@ mod tests {
         for x in &mut data[CHUNK..] {
             *x = (*x & !4) | (flip & 4);
         }
-        let s = cap_from(&data);
-        for mask in [1u16, 2, 4, 7] {
-            for _ in 0..200 {
-                let from = lcg(&mut seed) % data.len() as u64;
-                let brute_next = (from as usize + 1..data.len())
-                    .find(|&i| (data[i] ^ data[i - 1]) as u16 & mask != 0)
-                    .map(|i| i as u64);
-                assert_eq!(s.next_change(mask, from), brute_next, "next from {from} mask {mask}");
-                let brute_prev = (1..=from as usize)
-                    .rev()
-                    .find(|&i| (data[i] ^ data[i - 1]) as u16 & mask != 0)
-                    .map(|i| i as u64);
-                assert_eq!(s.prev_change(mask, from), brute_prev, "prev from {from} mask {mask}");
+        let first_edge = |mask: u16| (1..data.len()).find(|&i| (data[i] ^ data[i - 1]) as u16 & mask != 0).map(|i| i as u64);
+        for origin in ORIGINS {
+            let s = cap_with_origin(&data, origin);
+            for mask in [1u16, 2, 4, 7] {
+                for _ in 0..200 {
+                    let from = lcg(&mut seed) % data.len() as u64;
+                    let brute_next = (from as usize + 1..data.len())
+                        .find(|&i| (data[i] ^ data[i - 1]) as u16 & mask != 0)
+                        .map(|i| i as u64);
+                    assert_eq!(s.next_change(mask, from), brute_next, "next from {from} mask {mask} origin {origin}");
+                    let brute_prev = (1..=from as usize)
+                        .rev()
+                        .find(|&i| (data[i] ^ data[i - 1]) as u16 & mask != 0)
+                        .map(|i| i as u64);
+                    assert_eq!(s.prev_change(mask, from), brute_prev, "prev from {from} mask {mask} origin {origin}");
+                }
+                // Searching back past the first edge must not find the samples before the origin.
+                let e = first_edge(mask).unwrap();
+                assert_eq!(s.prev_change(mask, e - 1), None, "before first edge, origin {origin}");
+                assert_eq!(s.prev_change(mask, 0), None);
+                assert_eq!(s.next_change(mask, 0), Some(e));
             }
+            assert_eq!(s.next_change(4, CHUNK as u64 - 1), Some(CHUNK as u64));
+            assert_eq!(s.prev_change(4, CHUNK as u64), Some(CHUNK as u64));
         }
-        assert_eq!(s.next_change(4, CHUNK as u64 - 1), Some(CHUNK as u64));
-        assert_eq!(s.prev_change(4, CHUNK as u64), Some(CHUNK as u64));
     }
 
     /// Reference burst search over a plain edge list.
@@ -589,19 +713,21 @@ mod tests {
             })
             .collect();
         let edges: Vec<u64> = (1..data.len()).filter(|&i| (data[i] ^ data[i - 1]) & 1 != 0).map(|i| i as u64).collect();
-        let s = cap_from(&data);
-        let mut hits = 0;
-        for _ in 0..2000 {
-            // Bias pointers towards edges so the tolerance and gap cases are exercised.
-            let e = edges[lcg(&mut seed) as usize % edges.len()];
-            let sample = (e + lcg(&mut seed) % 400).saturating_sub(200).min(data.len() as u64 - 1);
-            let max_gap = 2 + lcg(&mut seed) % 300;
-            let tol = lcg(&mut seed) % max_gap;
-            let want = brute_burst(&edges, sample, max_gap, tol);
-            hits += want.is_some() as usize;
-            assert_eq!(s.burst_at(1, sample, max_gap, tol, usize::MAX), want, "sample {sample} gap {max_gap} tol {tol}");
+        for origin in ORIGINS {
+            let s = cap_with_origin(&data, origin);
+            let mut hits = 0;
+            for _ in 0..2000 {
+                // Bias pointers towards edges so the tolerance and gap cases are exercised.
+                let e = edges[lcg(&mut seed) as usize % edges.len()];
+                let sample = (e + lcg(&mut seed) % 400).saturating_sub(200).min(data.len() as u64 - 1);
+                let max_gap = 2 + lcg(&mut seed) % 300;
+                let tol = lcg(&mut seed) % max_gap;
+                let want = brute_burst(&edges, sample, max_gap, tol);
+                hits += want.is_some() as usize;
+                assert_eq!(s.burst_at(1, sample, max_gap, tol, usize::MAX), want, "sample {sample} gap {max_gap} tol {tol} origin {origin}");
+            }
+            assert!(hits > 500, "too few bursts exercised: {hits}");
         }
-        assert!(hits > 500, "too few bursts exercised: {hits}");
     }
 
     /// Idle, burst of 4 edges at 1000..1030, idle, lone edge at 5000, idle.

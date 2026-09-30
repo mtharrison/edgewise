@@ -1,9 +1,11 @@
 //! Software trigger: holds a pre-trigger ring until the condition matches,
 //! then forwards everything into the capture up to the sample limit.
+//!
+//! The ring is kept as capture chunks, summaries and all, so when the trigger
+//! fires they are handed to the capture as they are, without copying.
 
-use crate::capture::Capture;
+use crate::capture::{append_chunks, Capture, Chunk};
 use serde::Deserialize;
-use std::collections::VecDeque;
 use std::sync::Arc;
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
@@ -74,8 +76,11 @@ pub struct Feeder {
     limit: u64,
     written: u64,
     masks: Option<Masks>,
-    pre_bytes: usize,
-    ring: VecDeque<u8>,
+    pre_samples: usize,
+    /// Latest samples while waiting; all chunks but the last are full. Holds
+    /// fewer than `pre_samples` plus one chunk.
+    ring: Vec<Arc<Chunk>>,
+    ring_len: usize,
     prev: Option<u16>,
     trigger_at: Option<u64>,
 }
@@ -92,8 +97,9 @@ impl Feeder {
             limit,
             written: 0,
             masks,
-            pre_bytes: pre_samples as usize * unit,
-            ring: VecDeque::new(),
+            pre_samples: pre_samples as usize,
+            ring: Vec::new(),
+            ring_len: 0,
             prev: None,
             trigger_at: None,
         }
@@ -124,6 +130,18 @@ impl Feeder {
         self.limit == 0 || self.written < self.limit
     }
 
+    /// Add samples to the ring, then drop the oldest chunks the pre-trigger
+    /// window no longer reaches.
+    fn buffer(&mut self, data: &[u8]) {
+        self.ring_len += append_chunks(&mut self.ring, self.unit, data) as usize;
+        let mut stale = 0;
+        while stale < self.ring.len() && self.ring_len - self.ring[stale].len() >= self.pre_samples {
+            self.ring_len -= self.ring[stale].len();
+            stale += 1;
+        }
+        self.ring.drain(..stale);
+    }
+
     /// Returns false once the capture is complete.
     pub fn push(&mut self, data: &[u8]) -> bool {
         let Some(m) = self.masks else { return self.write(data) };
@@ -137,22 +155,27 @@ impl Feeder {
             self.prev = Some(v);
             if hit {
                 self.masks = None;
-                let pre: Vec<u8> = self.ring.drain(..).collect();
                 let cut = i * self.unit;
-                let mut head = pre;
-                head.extend_from_slice(&data[..cut]);
-                let skip = head.len().saturating_sub(self.pre_bytes);
-                let head = &head[skip..];
-                let at = (head.len() / self.unit) as u64;
-                self.trigger_at = Some(at);
-                self.capture.set_trigger(Some(at));
-                return self.write(head) && self.write(&data[cut..]);
+                self.buffer(&data[..cut]);
+                // Keep the last `pre_samples` of the ring; the capture starts that far from its end.
+                let at = self.ring_len.min(self.pre_samples);
+                let origin = self.ring_len - at;
+                self.ring_len = 0;
+                self.trigger_at = Some(at as u64);
+                self.capture.set_trigger(Some(at as u64));
+                self.capture.adopt(std::mem::take(&mut self.ring), origin);
+                // pre_samples is below the limit, so there is room for the rest.
+                self.written = at as u64;
+                return self.write(&data[cut..]);
             }
         }
-        self.ring.extend(&data[..n * self.unit]);
-        let excess = self.ring.len().saturating_sub(self.pre_bytes);
-        self.ring.drain(..excess);
+        self.buffer(&data[..n * self.unit]);
         true
+    }
+
+    #[cfg(test)]
+    fn ring_samples(&self) -> usize {
+        self.ring.iter().map(|c| c.len()).sum()
     }
 }
 
@@ -208,5 +231,95 @@ mod tests {
         assert_eq!(s.len, 2000);
         assert_eq!(s.get(999), 0);
         assert_eq!(s.get(1000), 1);
+    }
+
+    use crate::capture::CHUNK;
+
+    /// Samples with noise on the low bits and `bit` rising at `hit`.
+    fn stream(len: usize, hit: usize, bit: u8) -> Vec<u16> {
+        let mut seed = 11u64;
+        (0..len)
+            .map(|i| {
+                seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+                (seed >> 60) as u16 | if i >= hit { 1 << bit } else { 0 }
+            })
+            .collect()
+    }
+
+    fn bytes(samples: &[u16], unit: usize) -> Vec<u8> {
+        samples.iter().flat_map(|v| v.to_le_bytes()[..unit].to_vec()).collect()
+    }
+
+    /// Feed `samples` in `block`-sample pushes through a rising trigger on `bit`
+    /// and check the capture against the plain definition: the `pre` samples
+    /// before the hit (or all of them, if fewer), then everything after, up to
+    /// the limit. Also checks the ring stays under `pre` plus one chunk.
+    fn check(samples: &[u16], hit: usize, bit: u8, channels: usize, block: usize, limit: u64, pre: f64, pre_unlimited: u64) {
+        let unit = if channels > 8 { 2 } else { 1 };
+        let cap = Arc::new(Capture::new(1_000_000, channels));
+        let terms = [TriggerTerm { channel: bit, condition: Condition::Rising }];
+        let mut f = Feeder::new(cap.clone(), unit, limit, &terms, pre, pre_unlimited);
+        let pre_samples = f.pre_samples;
+        let data = bytes(samples, unit);
+        let mut fed = 0;
+        let mut more = true;
+        for part in data.chunks(block * unit) {
+            if !more {
+                break;
+            }
+            more = f.push(part);
+            fed += part.len() / unit;
+            if f.armed() {
+                assert!(f.ring_samples() < pre_samples + CHUNK, "ring holds {} after {fed}", f.ring_samples());
+                assert!(f.ring_samples() >= pre_samples.min(fed));
+            }
+        }
+        let start = hit.saturating_sub(pre_samples);
+        let end = if limit == 0 { samples.len() } else { (start + limit as usize).min(samples.len()) };
+        let s = cap.snapshot();
+        assert_eq!(f.trigger_at(), Some((hit - start) as u64));
+        assert_eq!(s.meta.trigger, Some((hit - start) as u64));
+        assert_eq!(s.len as usize, end - start);
+        assert!(s.samples(0, s.len) == samples[start..end], "samples differ");
+        if limit > 0 && end - start == limit as usize {
+            assert!(!more, "capture should be complete");
+        }
+    }
+
+    #[test]
+    fn pretrigger_over_a_chunk_mid_chunk_hit() {
+        let hit = 3 * CHUNK + 12_345;
+        check(&stream(hit + 500_000, hit, 5), hit, 5, 8, 480_000, 0, 0.0, 2 * CHUNK as u64 + 1000);
+    }
+
+    #[test]
+    fn hit_before_ring_fills() {
+        let hit = 3000;
+        check(&stream(10_000, hit, 5), hit, 5, 8, 700, 0, 0.0, 5000);
+        check(&stream(2 * CHUNK, CHUNK + 5, 5), CHUNK + 5, 5, 8, 100_000, 0, 0.0, 3 * CHUNK as u64);
+    }
+
+    #[test]
+    fn hit_in_first_block() {
+        check(&stream(10_000, 3000, 5), 3000, 5, 8, 4096, 0, 0.0, 5000);
+        check(&stream(10_000, 3000, 5), 3000, 5, 8, 4096, 0, 0.0, 1000);
+        check(&stream(10_000, 3000, 5), 3000, 5, 8, 4096, 0, 0.0, 0);
+    }
+
+    #[test]
+    fn sixteen_channels() {
+        let hit = CHUNK + CHUNK / 2 + 77;
+        check(&stream(hit + 200_000, hit, 12), hit, 12, 16, 240_000, 0, 0.0, CHUNK as u64 + 999);
+    }
+
+    #[test]
+    fn sample_limit_exactly_filled() {
+        // Kept pre-trigger samples plus the rest end exactly at the last sample fed.
+        let (limit, hit) = (10_000usize, 6000);
+        check(&stream(hit - 3000 + limit, hit, 5), hit, 5, 8, 1000, limit as u64, 0.3, 0);
+        let (limit, hit) = (3 * CHUNK, 4 * CHUNK + 100);
+        check(&stream(hit - (limit as f64 * 0.5) as usize + limit, hit, 5), hit, 5, 8, 480_000, limit as u64, 0.5, 0);
+        // More data than the limit: the rest is cut off.
+        check(&stream(hit + 2 * CHUNK, hit, 5), hit, 5, 8, 480_000, limit as u64, 0.5, 0);
     }
 }
