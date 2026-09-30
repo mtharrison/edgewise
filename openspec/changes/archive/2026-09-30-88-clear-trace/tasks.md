@@ -17,6 +17,6 @@
 
 ## 4. Verify and archive
 
-- [ ] 4.1 Run `npm test` and `npm run typecheck` and confirm both pass
-- [ ] 4.2 Run the `openspec-verify-change` skill against `88-clear-trace` and resolve anything it flags
-- [ ] 4.3 Run the `openspec-archive-change` skill to archive the change and merge the deltas into `openspec/specs/acquisition/spec.md` and `openspec/specs/app-shell/spec.md`
+- [x] 4.1 Run `npm test` and `npm run typecheck` and confirm both pass
+- [x] 4.2 Run the `openspec-verify-change` skill against `88-clear-trace` and resolve anything it flags
+- [x] 4.3 Run the `openspec-archive-change` skill to archive the change and merge the deltas into `openspec/specs/acquisition/spec.md` and `openspec/specs/app-shell/spec.md`
