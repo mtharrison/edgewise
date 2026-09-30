@@ -8,7 +8,7 @@
 
 ## 2. UI check
 
-- [ ] 2.1 Add `scripts/checks/zoom-limits.mjs`: run a demo capture, zoom out as far as possible and assert the ruler/status bar shows a span of the capture plus 20 ms, pan to each end and assert the view stops 10 ms past it, press `F` and assert the capture fills the width. Save a `shot` of the fully zoomed-out view. Verify with `node scripts/ui.mjs scripts/checks/zoom-limits.mjs` and read the screenshot
+- [x] 2.1 Add `scripts/checks/zoom-limits.mjs`: run a demo capture, zoom out as far as possible and assert the ruler/status bar shows a span of the capture plus 20 ms, pan to each end and assert the view stops 10 ms past it, press `F` and assert the capture fills the width. Save a `shot` of the fully zoomed-out view. Verify with `node scripts/ui.mjs scripts/checks/zoom-limits.mjs` and read the screenshot
 
 ## 3. Spec update and archive
 
