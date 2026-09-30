@@ -169,4 +169,22 @@ mod tests {
         assert_eq!(s.get(2_999_999), data[2_999_999] as u16);
         assert_eq!(parse_rate("500 kHz"), Some(500_000));
     }
+
+    #[test]
+    fn sr_roundtrip_with_origin() {
+        // A capture that starts part-way into its first chunk, as after a trigger.
+        let origin = 700_000;
+        let data: Vec<u8> = (0..3_000_000u32).map(|i| (i / 7) as u8).collect();
+        let mut chunks = Vec::new();
+        crate::capture::append_chunks(&mut chunks, 1, &data);
+        let cap = Capture::new(24_000_000, 8);
+        cap.adopt(chunks, origin);
+        let dir = std::env::temp_dir().join("edgewise-test-origin.sr");
+        let names: Vec<String> = (0..8).map(|i| format!("ch{i}")).collect();
+        save_sr(&cap.snapshot(), &names, &dir).unwrap();
+        let (back, _) = load_sr(&dir).unwrap();
+        let s = back.snapshot();
+        assert_eq!(s.len as usize, data.len() - origin);
+        assert_eq!(s.samples(0, s.len), data[origin..].iter().map(|&v| v as u16).collect::<Vec<_>>());
+    }
 }

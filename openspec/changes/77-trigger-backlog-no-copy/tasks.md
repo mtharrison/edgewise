@@ -7,10 +7,10 @@
 
 ## 2. Capture start offset
 
-- [ ] 2.1 Add an `origin` (local start index in chunk 0) to `Capture`'s state and `Snapshot`, and apply it in `get`, `summary`, `next_change`, `prev_change`, `render`, `samples` and `raw_chunks` (`crates/logic-core/src/capture.rs`)
-- [ ] 2.2 Add a `Capture` method that takes a ready-built `Vec<Arc<Chunk>>` and an origin, replacing an empty capture's contents without copying
-- [ ] 2.3 Extend the brute-force tests in `capture.rs` (summary, edge search, burst) to also run on a capture built with a non-zero origin, including an origin near the end of chunk 0 and data crossing into chunk 1
-- [ ] 2.4 Add a `formats.rs` test: save and reopen a capture with a non-zero origin and check it starts at the first kept sample with the same samples
+- [x] 2.1 Add an `origin` (local start index in chunk 0) to `Capture`'s state and `Snapshot`, and apply it in `get`, `summary`, `next_change`, `prev_change`, `render`, `samples` and `raw_chunks` (`crates/logic-core/src/capture.rs`)
+- [x] 2.2 Add a `Capture` method that takes a ready-built `Vec<Arc<Chunk>>` and an origin, replacing an empty capture's contents without copying
+- [x] 2.3 Extend the brute-force tests in `capture.rs` (summary, edge search, burst) to also run on a capture built with a non-zero origin, including an origin near the end of chunk 0 and data crossing into chunk 1
+- [x] 2.4 Add a `formats.rs` test: save and reopen a capture with a non-zero origin and check it starts at the first kept sample with the same samples
 
 ## 3. Chunked pre-trigger ring
 
