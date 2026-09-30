@@ -237,6 +237,19 @@ impl Engine {
         }
     }
 
+    /// Swap in an empty capture and go back to `idle`. Ignored while a capture is in progress.
+    pub fn clear(&self) {
+        let mut st = self.status.lock();
+        if matches!(st.state, AcqState::Starting | AcqState::Waiting | AcqState::Running) {
+            return;
+        }
+        let meta = self.capture.lock().snapshot().meta;
+        self.replace_capture(Arc::new(Capture::new(meta.samplerate, meta.channels)));
+        st.state = AcqState::Idle;
+        st.message.clear();
+        st.pretrigger_kept = None;
+    }
+
     pub fn status(&self) -> Status {
         let snap_meta;
         let len;
@@ -415,6 +428,61 @@ mod tests {
         e.stop();
         let st = e.status();
         assert_eq!((st.trigger, st.pretrigger_kept), (Some(40_000), None), "{}", st.message);
+    }
+
+    fn demo_opts(sample_limit: u64) -> StartOptions {
+        StartOptions {
+            device_id: devices::demo::ID.into(),
+            samplerate: 1_000_000,
+            sample_limit,
+            trigger: vec![],
+            pretrigger: 0.1,
+            pretrigger_time: 0.1,
+        }
+    }
+
+    #[test]
+    fn clear_after_a_finished_capture() {
+        let e = Engine::new();
+        e.start(demo_opts(100_000)).unwrap();
+        let done = wait_done(&e, Duration::from_secs(5));
+        assert_eq!((done.state, done.samples), (AcqState::Done, 100_000), "{}", done.message);
+        e.clear();
+        let st = e.status();
+        assert_eq!((st.state, st.message.as_str(), st.samples), (AcqState::Idle, "", 0));
+        assert!(st.capture_id > done.capture_id);
+        assert_eq!((st.samplerate, st.channels), (done.samplerate, done.channels));
+    }
+
+    #[test]
+    fn clear_after_an_error() {
+        let e = Engine::new();
+        e.start(demo_opts(100_000)).unwrap();
+        wait_done(&e, Duration::from_secs(5));
+        {
+            let mut st = e.status.lock();
+            st.state = AcqState::Error;
+            st.message = "USB transfer failed".into();
+        }
+        e.clear();
+        let st = e.status();
+        assert_eq!((st.state, st.message.as_str(), st.samples), (AcqState::Idle, "", 0));
+    }
+
+    #[test]
+    fn clear_is_ignored_while_capturing() {
+        let e = Engine::new();
+        e.start(demo_opts(0)).unwrap();
+        let t0 = Instant::now();
+        while e.status().samples == 0 && t0.elapsed() < Duration::from_secs(5) {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        let before = e.status();
+        e.clear();
+        let after = e.status();
+        assert_eq!((after.state, after.capture_id), (AcqState::Running, before.capture_id));
+        assert!(after.samples >= before.samples && after.samples > 0);
+        e.stop();
     }
 
     #[test]

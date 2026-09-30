@@ -145,6 +145,21 @@ export async function stopCapture() {
   await pollStatus()
 }
 
+/** Asks for confirmation, then discards the capture; settings and decoders stay. */
+export async function clearCapture() {
+  const { status } = get()
+  if (isBusy(status) || status.samples === 0) return
+  if (!(await bridge.confirmClear())) return
+  try {
+    await engine.clear()
+    // The view goes back to its launch zoom; fitting 0 samples would zoom to nanoseconds.
+    set({ markers: { a: null, b: null }, measurement: null, hover: null, view: useStore.getInitialState().view })
+    await pollStatus()
+  } catch (e) {
+    toast(String((e as Error).message ?? e))
+  }
+}
+
 export function toggleCapture() {
   return isBusy(get().status) ? stopCapture() : startCapture()
 }
@@ -191,7 +206,7 @@ export function fit() {
 
 export function clampView(start: number, spp: number) {
   const { status, plotWidth } = get()
-  return clampViewTo(start, spp, status.samples, plotWidth)
+  return clampViewTo(start, spp, status.samples, plotWidth, status.samplerate)
 }
 
 export function zoomAt(factor: number, x: number) {

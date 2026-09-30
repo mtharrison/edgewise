@@ -2,25 +2,36 @@ import { describe, expect, it } from 'vitest'
 import { annotationAt, clampViewTo, frameRange, viewPath } from './view'
 
 describe('clampViewTo', () => {
+  // 100 ms at 100 kHz: the 10 ms margin is 1000 samples.
+  const n = 10_000
+  const rate = 100_000
+
   it('leaves a view within limits unchanged', () => {
-    expect(clampViewTo(100, 2, 10_000, 1000)).toEqual({ start: 100, spp: 2 })
+    expect(clampViewTo(100, 2, n, 1000, rate)).toEqual({ start: 100, spp: 2 })
   })
 
   it('limits zoom-in to 64 px per sample', () => {
-    expect(clampViewTo(0, 1 / 1000, 10_000, 1000).spp).toBe(1 / 64)
+    expect(clampViewTo(0, 1 / 1000, n, 1000, rate).spp).toBe(1 / 64)
   })
 
-  it('limits zoom-out to 4x the capture', () => {
-    expect(clampViewTo(0, 1000, 10_000, 1000).spp).toBe(40)
+  it('limits zoom-out to the capture plus 10 ms either side', () => {
+    expect(clampViewTo(0, 1000, n, 1000, rate)).toEqual({ start: -1000, spp: 12 })
   })
 
-  it('keeps at least half the view on the capture', () => {
-    expect(clampViewTo(-5000, 2, 10_000, 1000).start).toBe(-1000)
-    expect(clampViewTo(50_000, 2, 10_000, 1000).start).toBe(9000)
+  it('stops panning 10 ms before the start and 10 ms after the end', () => {
+    expect(clampViewTo(-5000, 2, n, 1000, rate).start).toBe(-1000)
+    const end = clampViewTo(50_000, 2, n, 1000, rate)
+    expect(end.start + end.spp * 1000).toBe(n + 1000)
   })
 
-  it('treats an empty capture as one sample', () => {
-    expect(clampViewTo(0, 1, 0, 100).spp).toBe(0.04)
+  it('treats an empty capture as one sample with the margins around it', () => {
+    expect(clampViewTo(0, 1, 0, 100, 1000)).toEqual({ start: -10, spp: 0.21 })
+  })
+
+  it('clamps to the capture with no margin when the sample rate is unknown', () => {
+    const v = clampViewTo(-500, 100, n, 1000, 0)
+    expect(v.spp).toBe(10)
+    expect(v.start).toBeCloseTo(0)
   })
 })
 

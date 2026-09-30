@@ -6,6 +6,7 @@ const bridge = {
   saveDialog: (kind: 'sr' | 'vcd'): Promise<string | null> => ipcRenderer.invoke('dialog:save', kind),
   openFirmwareFolder: () => ipcRenderer.invoke('firmware:open'),
   chooseFirmware: (file: string): Promise<boolean> => ipcRenderer.invoke('firmware:missing', file),
+  confirmClear: (): Promise<boolean> => ipcRenderer.invoke('clear:confirm'),
   onMenu: (cb: (cmd: string) => void) => {
     const h = (_: unknown, cmd: string) => cb(cmd)
     ipcRenderer.on('menu', h)
