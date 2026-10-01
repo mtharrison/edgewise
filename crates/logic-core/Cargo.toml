@@ -6,8 +6,8 @@ license = "MIT"
 
 [dependencies]
 parking_lot = "0.12"
-nusb = "0.1"
-zip = { version = "2", default-features = false, features = ["deflate"] }
+nusb = "0.2"
+zip = { version = "8", default-features = false, features = ["deflate"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-thiserror = "1"
+thiserror = "2"
